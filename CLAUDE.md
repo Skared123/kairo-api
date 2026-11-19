@@ -1,10 +1,19 @@
-# Kairo
+# Kairo API
 
 Kairo is a job search companion: track applications, get prepared, and act on the right opportunity in time.
 It is the author's daily tool and a portfolio project.
 
 - Product vision, modules, scope rule and roadmap: `docs/IDEA.md`
 - Technical decisions, with alternatives and reasons: `docs/DECISIONS.md` (one entry per decision)
+
+## Repositories
+
+Two repos, cloned side by side under the same parent folder (see decision 003):
+
+| Repo | Contents |
+|---|---|
+| `kairo-api` (this one) | NestJS API, PostgreSQL, and the product-wide docs in `docs/` |
+| `kairo-web` | Next.js web app, UI only. Its `CLAUDE.md` points back to the docs here |
 
 ## Language
 
