@@ -267,3 +267,91 @@ TypeORM implementation and a contract test suite. Both packages are at 0.1.x.
   built; if not, local development runs over HTTPS.
 - Passport, `@nestjs/jwt` and `argon2` are not used. Argon2id is dropped in favor of the module's scrypt.
 - Login rate limiting (`@nestjs/throttler`) is still deferred and must be added before any deployment.
+
+---
+
+## 009. Database naming: snake_case through a custom naming strategy
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** TypeORM 1.x names tables in snake_case but keeps columns as the property name (`createdAt`), which
+PostgreSQL then needs quoted in every hand-written query. Constraint and index names are deterministic hashes.
+
+**Options.** A naming strategy that extends `DefaultNamingStrategy` and snake-cases columns; an explicit
+`name: 'created_at'` on every column; or camelCase columns.
+
+**Decision.** A small `SnakeNamingStrategy` of our own, about 15 lines, with no dependency.
+
+**Consequences.** Columns follow the PostgreSQL convention without per-column names, and a forgotten `name:` can no
+longer leave a camelCase column behind. Decision 004 still applies: constraints and indexes we reference get
+explicit, readable names.
+
+---
+
+## 010. First admin: a setup endpoint guarded by an advisory lock
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** `docs/IDEA.md` says the first account becomes admin. Two requests arriving at the same time must not
+both create one.
+
+**Options.** `POST /auth/setup`, open only while there are no users; or a terminal command (`pnpm create-admin`)
+with no public endpoint, which gives someone who clones the repo no first-run screen.
+
+**Decision.** `POST /auth/setup`. It takes `pg_advisory_xact_lock` inside a transaction, counts users, and creates
+the admin only if there are none. A concurrent second request waits for the lock, finds a user and is rejected.
+
+**Consequences.** Once any user exists, the endpoint is closed for good. `GET /auth/setup` tells the web app
+whether to show the first-run screen.
+
+---
+
+## 011. Forced password change for accounts created by an admin
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** The admin creates accounts with a temporary password. If it stayed valid, the admin could sign in as
+that user and read their data, which breaks the rule that admins cannot see other users' data.
+
+**Options.** Force a change on first sign-in, or trust the admin.
+
+**Decision.** Accounts created by an admin start with `must_change_password = true`. Until the user changes it,
+every route except `POST /auth/password` and `POST /auth/sign-out` returns 403.
+
+**Consequences.** The admin rule holds in practice, not only in queries. The first admin, created through setup,
+chooses their own password and starts with the flag off.
+
+---
+
+## 012. Password length: 15 to 128 characters, no composition rules
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** Passwords are the only factor in v0.1.
+
+**Options.** 15 characters, what NIST SP 800-63B asks for single-factor passwords; or 12, easier but below it.
+
+**Decision.** 15 minimum, 128 maximum, no rules about uppercase letters, digits or symbols, following NIST.
+
+**Consequences.** The maximum bounds the work scrypt does per request.
+
+---
+
+## 013. End-to-end tests run against a `kairo_test` database in the same container
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** Authentication and user isolation have to be tested against a real PostgreSQL, not mocks.
+
+**Options.** A second database in the existing container; or Testcontainers, a fresh PostgreSQL per run, more
+isolated but one more dependency and slower.
+
+**Decision.** A `kairo_test` database in the `kairo-db` container, created by an init script, migrated before the
+end-to-end suite runs and cleaned between tests.
+
+**Consequences.** `pnpm db:up` is needed before `pnpm test:e2e`. Development data in `kairo` is never touched by tests.
