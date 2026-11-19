@@ -5,7 +5,8 @@ import { entities } from './entities.js';
 /** Connection options shared by the Nest app and the TypeORM CLI. */
 export function buildDataSourceOptions(url: string | undefined): DataSourceOptions {
   if (!url) {
-    // Without this guard, pg would fall back to localhost:5432 and could connect to another project's database.
+    // The app validates DATABASE_URL through envSchema; the CLI does not go through Nest, so it relies on this guard.
+    // Without it, pg would fall back to localhost:5432 and could connect to another project's database.
     throw new Error('DATABASE_URL is not set. Copy .env.example to .env and fill it in.');
   }
 
