@@ -15,6 +15,14 @@ Two repos, cloned side by side under the same parent folder (see decision 003):
 | `kairo-api` (this one) | NestJS API, PostgreSQL, and the product-wide docs in `docs/` |
 | `kairo-web` | Next.js web app, UI only. Its `CLAUDE.md` points back to the docs here |
 
+Local layout: a plain parent folder (not a git repo) groups both clones.
+
+```
+~/Developer/kairo/
+  kairo-api/
+  kairo-web/
+```
+
 ## Language
 
 - Code, names, comments, docs, commit messages: English.
