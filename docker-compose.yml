@@ -13,6 +13,8 @@ services:
     volumes:
       # Since PostgreSQL 18 the image keeps data under /var/lib/postgresql/<major>/, so the volume mounts the parent.
       - kairo-db-data:/var/lib/postgresql
+      # Init scripts run once, on an empty volume: they create the kairo_test database for end-to-end tests.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kairo -d kairo"]
       interval: 5s

@@ -1,0 +1,6 @@
+# pnpm settings for this single-package project (not a monorepo).
+
+# Dependency install scripts that were reviewed. Anything not listed stays blocked until reviewed.
+allowBuilds:
+  # Pulled in by @nestjs/swagger -> swagger-ui-dist. Its postinstall only sends install analytics.
+  "@scarf/scarf": false

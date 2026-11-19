@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
+import { APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
@@ -17,6 +18,10 @@ import { buildDataSourceOptions } from './database/database.config.js';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Registered here rather than in main.ts so end-to-end tests, which skip main.ts, validate requests too.
+    { provide: APP_PIPE, useValue: new StandardSchemaValidationPipe() },
+  ],
 })
 export class AppModule {}
