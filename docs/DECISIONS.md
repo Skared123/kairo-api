@@ -141,3 +141,50 @@ it is read. The web app generates its types from `openapi.json` with `openapi-ty
 - `class-transformer` has had no release since 2022. It is stable and still used in the NestJS docs, but it is a
   dependency to watch.
 - A change to a DTO means regenerating the types in `kairo-web` (see decision 003).
+
+---
+
+## 006. Authentication: JWT access token with rotating refresh tokens, Argon2id passwords, role guards
+
+- **Date:** 2026-11-18
+- **Status:** Accepted
+
+**Context.** v0.1 needs login, two roles (`admin` manages accounts, `user` uses the app) and accounts the admin
+can deactivate. Kairo runs locally for now, but it is also a portfolio piece for roles where JWT, token storage,
+revocation and RBAC come up in interviews.
+
+**Options.**
+- **Server-side sessions in Postgres** (random token in an `httpOnly` cookie, hashed in a `sessions` table).
+  Simplest, with real logout and instant deactivation. Less common as a keyword in job postings.
+- **JWT access token plus rotating refresh tokens.** The most common pattern in Node and NestJS roles. More moving
+  parts: rotation, reuse detection, and an extra check so deactivation does not wait for the access token to expire.
+- **Better Auth.** A complete library with roles and an admin plugin, but it owns its tables outside the TypeORM
+  migrations and its NestJS integration is community-maintained.
+- **Password hashing:** Argon2id (`argon2`), scrypt (`node:crypto`, no dependency), bcrypt (older, 72-byte limit).
+
+**Decision.** JWT access token with rotating refresh tokens, using `@nestjs/passport` and `@nestjs/jwt`.
+Passwords hashed with Argon2id.
+
+- **Access token:** a JWT signed with a secret from `.env`, valid for 15 minutes, sent in an `httpOnly` cookie.
+  Never stored in `localStorage` or readable by JavaScript.
+- **Refresh token:** an opaque random value (not a JWT), valid for 30 days, in an `httpOnly` cookie scoped to the
+  refresh endpoint. Only its SHA-256 hash is stored, in a `refresh_tokens` table with `user_id` and expiry. A fast
+  hash is enough because the token is random and long, unlike a password.
+- **Rotation and reuse detection:** every refresh issues a new refresh token and invalidates the old one. If an
+  already used token comes back, every refresh token of that user is revoked.
+- **Logout and deactivation** delete the user's refresh tokens. The access token check also confirms the account
+  is still active, so deactivation takes effect on the next request instead of up to 15 minutes later.
+- **Passwords:** Argon2id with at least OWASP's minimum parameters (`m=19456` KiB, `t=2`, `p=1`). Only the encoded
+  hash (algorithm, parameters, salt, hash) is stored; passwords are never encrypted or recoverable.
+- **Roles:** a `role` column (`admin` or `user`). A global auth guard protects every route except those marked
+  `@Public()`. `@Roles('admin')` with a `RolesGuard` protects account management routes. Admins get no bypass in
+  data queries: they only see their own data, like any user.
+
+**Consequences.**
+- New dependencies, each explained when installed: `@nestjs/passport`, `passport`, `passport-jwt`, `@nestjs/jwt`,
+  `cookie-parser`, `argon2`. `argon2` is native and may need `pnpm approve-builds`.
+- Cookies are `SameSite=Lax`, the API only accepts JSON, and CORS allows only the web app's origin with
+  credentials. Together they cover CSRF for this setup.
+- JWT secrets live in `.env` and the API refuses to start if they are missing.
+- Login rate limiting (`@nestjs/throttler`) is deferred because Kairo runs locally. It must be added before any
+  deployment.

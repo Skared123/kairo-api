@@ -85,4 +85,5 @@ The roadmap is a living document. New modules are welcome when they pass the sco
 New ideas land here first, so they never interrupt the version in progress. When a version ships, the backlog
 is reviewed and each idea is either scheduled into the roadmap or dropped.
 
-- _(empty)_
+- **Sign in with Google (OAuth 2.0 / OpenID Connect).** An alternative to email and password; it works on
+  localhost. Proposed after v0.1.
