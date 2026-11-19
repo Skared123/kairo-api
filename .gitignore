@@ -8,3 +8,8 @@ node_modules/
 
 # macOS
 .DS_Store
+
+# Build and test output
+dist/
+coverage/
+*.tsbuildinfo
