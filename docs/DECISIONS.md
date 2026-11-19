@@ -76,3 +76,36 @@ The two are cloned side by side under the same parent folder.
   from it (for example with `openapi-typescript`). This shapes the validation decision.
 - A change that touches both sides takes two coordinated commits: API first, then regenerate types in the web app.
 - Each repo has its own CI and its own `dev` command.
+
+---
+
+## 004. ORM: TypeORM 1.x
+
+- **Date:** 2026-11-18
+- **Status:** Accepted
+
+**Context.** The API needs an ORM for PostgreSQL that works well with NestJS, keeps database rules in Postgres
+(decision 001), and makes it easy to scope every query to its user.
+
+**Options.**
+- **TypeORM 1.x.** Official NestJS integration (`@nestjs/typeorm`), entities as decorated classes, generated
+  migrations, already well known to the author. Weak point: query result types do not reflect partial selects or
+  loaded relations.
+- **Prisma.** Excellent types and developer experience, very common in TypeScript job postings. `CHECK`
+  constraints and `pg_trgm` indexes cannot be declared in the schema, and at decision time its `latest` npm tag
+  pointed to a release candidate, so its stable line was unclear.
+- **Drizzle.** Schema in TypeScript, strong inferred types, close to SQL, `CHECK` and `pg_trgm` indexes in the
+  schema. No official NestJS integration, and still 0.x with 1.0 in beta.
+
+**Decision.** TypeORM 1.x. It is the NestJS standard, it is actively maintained (1.0 shipped in May 2026 with
+frequent releases since), and the author knows it well enough to explain every line.
+
+**Consequences.**
+- Read the v1.0 release notes and upgrade guide before writing code: most examples online are still for 0.3.
+- `synchronize` is always off. Every schema change is a reviewed migration.
+- Indexes, foreign keys and checks get explicit names in the entities, so generated migrations match the
+  entities and a dry run of `migration:generate` reports no changes.
+- Controllers never return entities directly; services map them to response DTOs. This covers the weak query
+  types and keeps internal columns out of the API.
+- Every user-owned table has a non-null `user_id` foreign key, and every query on it filters by the current user.
+  The exact mechanism is designed in v0.1, with tests that prove one user cannot read another user's rows.
