@@ -26,6 +26,8 @@ Two repos, cloned side by side under the same parent folder (see decision 003):
   then propose the commit message.
 - **Decisions with alternatives come first.** When something has more than one reasonable option, present the
   options with trade-offs and a recommendation, and wait for Raymundo's choice. Record it in `docs/DECISIONS.md`.
+- **Check the current official docs before a technical decision**, not only npm versions and peer dependencies.
+  Libraries here may be newer than what you know (decisions 005 and 006 were superseded for this reason).
 - **Simple and standard over clever.** Do not add a dependency without explaining why it is needed.
 - **Tasks marked for Raymundo** (`TODO(Raymundo)`) are his to implement. Do not write the solution: give hints
   when asked, and review his code and tests the way a senior engineer would in a code review.
@@ -44,6 +46,10 @@ Two repos, cloned side by side under the same parent folder (see decision 003):
   `yarn.lock`.
 - pnpm blocks dependency install scripts. If one needs `pnpm approve-builds`, explain which package it is and
   what the script does before approving it.
+- NestJS 12 is ESM only: relative imports end in `.js`, there is no `__dirname` (use `import.meta.dirname`), and
+  tests run on Vitest (`vi.fn()`, not `jest.fn()`). Lint is oxlint. The docs index is
+  https://docs.nestjs.com/llms.txt, with a markdown page per chapter.
+- Prefer first-party `@nestjs/*` packages when one exists for the job, and check its docs page first.
 
 ## Privacy
 

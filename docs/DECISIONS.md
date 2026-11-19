@@ -1,7 +1,8 @@
 # Technical decisions
 
 One entry per decision: the context, the options considered, what was chosen and why, and what it costs.
-Entries are never rewritten; a decision that changes gets a new entry that supersedes the old one.
+Entries are never rewritten; a decision that changes gets a new entry that supersedes the old one, and only the
+old entry's status line changes to point at its replacement.
 
 ---
 
@@ -115,7 +116,7 @@ frequent releases since), and the author knows it well enough to explain every l
 ## 005. Validation: class-validator at the API boundary, zod for external data
 
 - **Date:** 2026-11-18
-- **Status:** Accepted
+- **Status:** Superseded by 007.
 
 **Context.** With separate repositories (decision 003), schemas cannot be shared as code between the API and the
 web app; the contract between them is the OpenAPI spec the API publishes. Separately, some data comes from
@@ -147,7 +148,7 @@ it is read. The web app generates its types from `openapi.json` with `openapi-ty
 ## 006. Authentication: JWT access token with rotating refresh tokens, Argon2id passwords, role guards
 
 - **Date:** 2026-11-18
-- **Status:** Accepted
+- **Status:** Superseded by 008.
 
 **Context.** v0.1 needs login, two roles (`admin` manages accounts, `user` uses the app) and accounts the admin
 can deactivate. Kairo runs locally for now, but it is also a portfolio piece for roles where JWT, token storage,
@@ -188,3 +189,81 @@ Passwords hashed with Argon2id.
 - JWT secrets live in `.env` and the API refuses to start if they are missing.
 - Login rate limiting (`@nestjs/throttler`) is deferred because Kairo runs locally. It must be added before any
   deployment.
+
+---
+
+## 007. Validation: zod everywhere through Nest's Standard Schema pipe
+
+- **Date:** 2026-11-19
+- **Status:** Accepted. Supersedes 005.
+
+**Context.** Decision 005 assumed zod at the API boundary needed `nestjs-zod`, which does not support NestJS 12.
+The NestJS 12 docs show otherwise: `StandardSchemaValidationPipe` validates any Standard Schema library, zod
+included, through `@Body({ schema })`, `@Query({ schema })` and `@Param('id', { schema })`, and `@nestjs/swagger`
+turns those schemas into the OpenAPI document with no configuration for zod 4.2 or later. Decision 005 was made
+from npm metadata without reading the NestJS 12 docs.
+
+**Options.**
+- **zod everywhere with `StandardSchemaValidationPipe`.** One schema per shape: validation, the TypeScript type and
+  the OpenAPI schema come from it. The same library validates external data.
+- **Keep decision 005.** class-validator for request DTOs, zod for external data. Two validation tools and two
+  extra dependencies (`class-validator`, `class-transformer`).
+
+**Decision.** zod everywhere. The global `StandardSchemaValidationPipe` validates every request; model replies and
+job feeds are parsed with zod when they are read.
+
+**Consequences.**
+- Request objects use `z.strictObject()`, so an unknown field is rejected instead of silently dropped (plain
+  `z.object()` strips unknown keys).
+- Types come from the schemas (`z.infer`); there are no DTO classes.
+- `class-validator`, `class-transformer` and `nestjs-zod` are not used. Variants of a schema use zod (`.partial()`,
+  `.pick()`) instead of `@nestjs/swagger` mapped types.
+- The web app still generates its types from `openapi.json` with `openapi-typescript` (decision 003).
+- Only zod is used, so no Standard Schema vendor detection or custom converter is needed.
+
+---
+
+## 008. Authentication: NestJS authentication module with server-side sessions
+
+- **Date:** 2026-11-19
+- **Status:** Accepted. Supersedes 006.
+
+**Context.** Decision 006 designed a custom JWT setup on Passport before checking the NestJS 12 docs. NestJS 12
+ships first-party `@nestjs/authentication` and `@nestjs/authorization`. The authentication module offers
+server-side sessions in an `httpOnly` cookie, and JWT bearer tokens returned in JSON and sent in the
+`Authorization` header. It is storage-agnostic: the app implements its store interfaces, and the docs include a
+TypeORM implementation and a contract test suite. Both packages are at 0.1.x.
+
+**Options.**
+- **Official module, session mode.** The NestJS 12 standard for browser apps: `httpOnly` cookie, hashed session
+  tokens, CSRF helper, instant revocation. Google sign-in (OpenID Connect), password reset and email verification
+  are built in. Passwords use scrypt. Pre-1.0.
+- **Official module, JWT mode.** Meant for API clients. In a browser, JavaScript would have to hold the access and
+  refresh tokens, which exposes them to XSS.
+- **Custom JWT in `httpOnly` cookies** (decision 006). Full control, but all the security code is ours while the
+  framework's standard goes another way.
+
+**Decision.** Official module in session mode, with `@nestjs/authorization` for permissions.
+
+- **Sessions:** the `__Host-sid` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Only the SHA-256 hash of the session
+  token is stored, with absolute and idle lifetimes.
+- **Storage:** a `TypeOrmAuthenticationStore` implementing the module's store interfaces, with its entities and
+  migrations, verified with the package's contract test suite against PostgreSQL.
+- **Users and roles are ours:** a `users` table with `role` (`admin` or `user`) and an active flag. Deactivating an
+  account revokes its sessions.
+- **Passwords:** the module's `PasswordHasher` (scrypt with OWASP parameters, `needsRehash()` for upgrades).
+- **CSRF and origins:** the web app's origin goes in `session.trustedOrigins`, and the API calls
+  `app.enableCsrfProtection()`.
+- **Permissions:** policy classes enforced with `@Can()`. No `before()` bypass for admins: they manage accounts and
+  see only their own data. Filtering every query by the current user stays our responsibility, with tests that
+  prove one user cannot read another user's rows.
+
+**Consequences.**
+- New dependencies: `@nestjs/authentication` and `@nestjs/authorization`. Both are pinned to exact versions while
+  they are 0.x, and their changelogs are read before every upgrade.
+- The module's tables store `user_id` as text with no foreign key, so revoking sessions on deactivation or
+  deletion is done explicitly in code.
+- The session cookie is `Secure`. Whether browsers accept it on `http://localhost` is checked when the skeleton is
+  built; if not, local development runs over HTTPS.
+- Passport, `@nestjs/jwt` and `argon2` are not used. Argon2id is dropped in favor of the module's scrypt.
+- Login rate limiting (`@nestjs/throttler`) is still deferred and must be added before any deployment.
