@@ -109,3 +109,35 @@ frequent releases since), and the author knows it well enough to explain every l
   types and keeps internal columns out of the API.
 - Every user-owned table has a non-null `user_id` foreign key, and every query on it filters by the current user.
   The exact mechanism is designed in v0.1, with tests that prove one user cannot read another user's rows.
+
+---
+
+## 005. Validation: class-validator at the API boundary, zod for external data
+
+- **Date:** 2026-11-18
+- **Status:** Accepted
+
+**Context.** With separate repositories (decision 003), schemas cannot be shared as code between the API and the
+web app; the contract between them is the OpenAPI spec the API publishes. Separately, some data comes from
+sources Kairo does not control: the model's replies (v0.6) and public job feeds (v0.8).
+
+**Options.**
+- **class-validator + `@nestjs/swagger` for request DTOs, zod for external data.** The NestJS standard; the
+  OpenAPI spec is generated from the DTOs. Two validation tools, each with its own boundary.
+- **zod everywhere through `nestjs-zod`.** One schema language. At decision time `nestjs-zod` 5.6.0 only declared
+  support for NestJS 10 and 11, so it would mean staying off NestJS 12 or forcing peer dependencies.
+- **zod everywhere with a hand-written pipe.** No extra dependency, but no generated OpenAPI spec, which the web
+  app needs for its types.
+
+**Decision.** class-validator for everything that enters through the HTTP API, zod for external data at the moment
+it is read. The web app generates its types from `openapi.json` with `openapi-typescript`.
+
+**Consequences.**
+- The global `ValidationPipe` runs with `whitelist: true` and `forbidNonWhitelisted: true`: an unknown field is
+  rejected with a 400 that names it, never silently dropped.
+- The `@nestjs/swagger` CLI plugin infers schema metadata from TypeScript types, to keep decorators to a minimum.
+- A decorator can still disagree with its TypeScript type (`@IsString()` on a `number`); tests on each endpoint
+  catch it.
+- `class-transformer` has had no release since 2022. It is stable and still used in the NestJS docs, but it is a
+  dependency to watch.
+- A change to a DTO means regenerating the types in `kairo-web` (see decision 003).
