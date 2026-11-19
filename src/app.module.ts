@@ -1,9 +1,11 @@
+import { AuthenticationModule } from '@nestjs/authentication';
 import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AuthModule } from './auth/auth.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
 
@@ -16,6 +18,22 @@ import { buildDataSourceOptions } from './database/database.config.js';
       useFactory: (config: ConfigService<Env, true>) =>
         buildDataSourceOptions(config.get('DATABASE_URL', { infer: true })),
     }),
+    // Registers a global guard: every route needs a signed-in user unless it is marked @Public() (decision 008).
+    AuthenticationModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) => ({
+        session: {
+          // Signed out after 14 days however active, or after 3 days without a request (decision 014).
+          absoluteTtl: '14d',
+          idleTtl: '3d',
+          // kairo-web runs on another origin than the API; the same list as enableCsrfProtection() in app.setup.ts.
+          trustedOrigins: [config.get('WEB_ORIGIN', { infer: true })],
+          // Kept with each session for a future "where you're signed in" page.
+          metadata: (request) => ({ userAgent: request.headers['user-agent'] }),
+        },
+      }),
+    }),
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [

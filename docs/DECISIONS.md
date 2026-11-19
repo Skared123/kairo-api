@@ -355,3 +355,22 @@ isolated but one more dependency and slower.
 end-to-end suite runs and cleaned between tests.
 
 **Consequences.** `pnpm db:up` is needed before `pnpm test:e2e`. Development data in `kairo` is never touched by tests.
+
+---
+
+## 014. Sessions last 14 days, or 3 days without use
+
+- **Date:** 2026-11-19
+- **Status:** Accepted
+
+**Context.** `@nestjs/authentication` ends a session at an absolute lifetime, however active, and earlier after an
+idle timeout. Its defaults are 7 days and 1 day. Kairo is a tool used almost every day on a personal machine.
+
+**Options.** The defaults (7d / 1d: signed out after a single day off); 14d / 3d, the example in the official docs;
+or 30d / 7d, fewer sign-ins but a stolen cookie stays useful for longer.
+
+**Decision.** `absoluteTtl: '14d'` and `idleTtl: '3d'`.
+
+**Consequences.** One sign-in every two weeks in daily use. Revisit before any public deployment. kairo-web's origin
+comes from a new `WEB_ORIGIN` variable (default `http://localhost:3000`), shared by CORS, `enableCsrfProtection()` and
+`session.trustedOrigins` through `src/app.setup.ts`.
