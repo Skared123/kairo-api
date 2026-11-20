@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/user.entity.js';
 import './auth-types.js';
 import { AuthController } from './auth.controller.js';
 import { CredentialsService } from './credentials.service.js';
+import { PasswordChangeGuard } from './password-change.guard.js';
 import { SessionAuth } from './session-auth.provider.js';
 import { Session } from './session.entity.js';
 import { TypeOrmSessionStore } from './typeorm-session.store.js';
@@ -15,6 +17,13 @@ import { TypeOrmSessionStore } from './typeorm-session.store.js';
 @Module({
   imports: [TypeOrmModule.forFeature([User, Session])],
   controllers: [AuthController],
-  providers: [TypeOrmSessionStore, SessionAuth, CredentialsService],
+  providers: [
+    TypeOrmSessionStore,
+    SessionAuth,
+    CredentialsService,
+    // Global guards run in module order: AuthModule comes after AuthenticationModule in AppModule, so this guard
+    // sees the user the authentication guard set.
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
+  ],
 })
 export class AuthModule {}

@@ -5,7 +5,7 @@ import type { App } from 'supertest/types.js';
 import type { DataSource } from 'typeorm';
 import { SETUP_LOCK_KEY } from '../src/auth/credentials.service.js';
 import { User } from '../src/users/user.entity.js';
-import { createTestApp, sessionCookie, WEB_ORIGIN } from './create-test-app.js';
+import { createTestApp, insertUser, sessionCookie, WEB_ORIGIN } from './create-test-app.js';
 
 const admin = { name: 'Ada Lovelace', email: 'ada@example.com', password: 'correct horse battery staple' };
 
@@ -27,16 +27,6 @@ describe('Authentication (e2e)', () => {
   async function setupAdmin(): Promise<string> {
     const res = await http.post('/auth/setup').send(admin).expect(201);
     return sessionCookie(res.headers['set-cookie']);
-  }
-
-  /** A regular account written straight to the database, as the admin endpoints will do in step 5. */
-  async function createUser(fields: Partial<User> = {}): Promise<{ email: string; password: string }> {
-    const password = 'another long passphrase';
-    const passwordHash = await app.get(PasswordHasher).hash(password);
-    const user = await dataSource
-      .getRepository(User)
-      .save({ name: 'Grace Hopper', email: 'grace@example.com', passwordHash, ...fields });
-    return { email: user.email, password };
   }
 
   describe('setup', () => {
@@ -89,16 +79,23 @@ describe('Authentication (e2e)', () => {
       expect(await dataSource.getRepository(User).count()).toBe(1);
     });
 
-    it('rejects a short password and unknown fields', async () => {
+    it('accepts any short password, and rejects an empty one and unknown fields', async () => {
       await http
         .post('/auth/setup')
-        .send({ ...admin, password: 'too short' })
+        .send({ ...admin, password: '' })
         .expect(400);
       await http
         .post('/auth/setup')
         .send({ ...admin, role: 'admin' })
         .expect(400);
       await http.get('/auth/setup').expect(200, { needsSetup: true });
+
+      // Decision 015: no minimum length.
+      await http
+        .post('/auth/setup')
+        .send({ ...admin, password: 'abc123' })
+        .expect(201);
+      await http.post('/auth/sign-in').send({ email: admin.email, password: 'abc123' }).expect(200);
     });
   });
 
@@ -135,7 +132,7 @@ describe('Authentication (e2e)', () => {
 
     it('refuses a deactivated account, and ends the sessions it already had', async () => {
       await setupAdmin();
-      const grace = await createUser();
+      const grace = await insertUser(app);
       const res = await http.post('/auth/sign-in').send(grace).expect(200);
       const cookie = sessionCookie(res.headers['set-cookie']);
 

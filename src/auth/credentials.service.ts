@@ -1,9 +1,9 @@
 import { PasswordHasher } from '@nestjs/authentication';
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, type Repository } from 'typeorm';
 import { User } from '../users/user.entity.js';
-import type { SetupDto } from './auth.schemas.js';
+import type { ChangePasswordDto, SetupDto } from './auth.schemas.js';
 
 /** Key of the advisory lock that makes concurrent setups take turns (decision 010). */
 export const SETUP_LOCK_KEY = 'kairo.auth.setup';
@@ -60,5 +60,20 @@ export class CredentialsService {
       await this.users.update({ id: user.id }, { passwordHash: await this.passwordHasher.hash(password) });
     }
     return user;
+  }
+
+  /**
+   * Replaces the user's password after checking the current one, and clears the forced change (decision 016).
+   * A wrong current password is a 400, not a 401, so the web app does not take it for an expired session.
+   */
+  async changePassword(userId: string, { currentPassword, newPassword }: ChangePasswordDto): Promise<User> {
+    const user = await this.users.findOneByOrFail({ id: userId });
+    if (!(await this.passwordHasher.verify(currentPassword, user.passwordHash))) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    user.passwordHash = await this.passwordHasher.hash(newPassword);
+    user.mustChangePassword = false;
+    return this.users.save(user);
   }
 }

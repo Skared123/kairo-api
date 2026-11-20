@@ -311,7 +311,7 @@ whether to show the first-run screen.
 ## 011. Forced password change for accounts created by an admin
 
 - **Date:** 2026-11-19
-- **Status:** Accepted
+- **Status:** Superseded by 016
 
 **Context.** The admin creates accounts with a temporary password. If it stayed valid, the admin could sign in as
 that user and read their data, which breaks the rule that admins cannot see other users' data.
@@ -329,7 +329,7 @@ chooses their own password and starts with the flag off.
 ## 012. Password length: 15 to 128 characters, no composition rules
 
 - **Date:** 2026-11-19
-- **Status:** Accepted
+- **Status:** Superseded by 015
 
 **Context.** Passwords are the only factor in v0.1.
 
@@ -374,3 +374,47 @@ or 30d / 7d, fewer sign-ins but a stolen cookie stays useful for longer.
 **Consequences.** One sign-in every two weeks in daily use. Revisit before any public deployment. kairo-web's origin
 comes from a new `WEB_ORIGIN` variable (default `http://localhost:3000`), shared by CORS, `enableCsrfProtection()` and
 `session.trustedOrigins` through `src/app.setup.ts`.
+
+---
+
+## 015. Any password up to 128 characters, no minimum length
+
+- **Date:** 2026-11-19
+- **Status:** Accepted (supersedes 012)
+
+**Context.** Decision 012 asked for 15 characters. For a personal tool that is a chore, and the author wants short
+passwords such as `abc123` to work, now and after deployment.
+
+**Options.** No minimum; a light minimum of 6; or keep 15 and bind the API to `127.0.0.1` only.
+
+**Decision.** No minimum length and no composition rules: any non-empty password of up to 128 characters. Each
+account owner chooses how strong their own password is.
+
+**Consequences.** The maximum still bounds the work scrypt does per request, and hashing is unchanged. A short password
+is easy to guess, so the sign-in throttler planned before deployment (decision 008) is what limits guessing.
+
+---
+
+## 016. Forced password change: a global guard, with `GET /auth/me` allowed
+
+- **Date:** 2026-11-19
+- **Status:** Accepted (supersedes 011)
+
+**Context.** Decision 011 stands: the admin creates accounts with a temporary password, and if it stayed valid the
+admin could sign in as that user and read their data. Two things were open: where the rule lives, and which routes
+stay reachable. With only `POST /auth/password` and `POST /auth/sign-out`, a web app reloaded on the change-password
+screen cannot even read who is signed in.
+
+**Options.** For the rule: a global guard of our own; a check in every `@nestjs/authorization` policy, repeated in each
+module and easy to forget; or the library's `mfa: 'pending'` session state, which exists for a second factor. For the
+routes: 011's two, or those two plus `GET /auth/me`, which only reads the caller's own profile.
+
+**Decision.** Accounts created by an admin start with `must_change_password = true`. A global `PasswordChangeGuard`,
+after the authentication guard, answers 403 with `error: 'password_change_required'` while the flag is true, on every
+route except those marked `@AllowPendingPasswordChange()`: `POST /auth/password`, `POST /auth/sign-out` and
+`GET /auth/me`.
+
+**Consequences.** The rule lives in one place and closes new routes by default. The first admin, created through
+setup, chooses their own password and starts with the flag off. Changing the password clears the flag, rotates the
+current session and ends the account's other sessions.
+

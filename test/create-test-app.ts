@@ -1,10 +1,11 @@
 import { PasswordHasher } from '@nestjs/authentication';
-import type { INestApplication } from '@nestjs/common';
+import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { App } from 'supertest/types.js';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
+import { User } from '../src/users/user.entity.js';
 import { resetDatabase } from './reset-database.js';
 
 /** The kairo-web origin the tests send, the default of WEB_ORIGIN. */
@@ -14,8 +15,13 @@ export const WEB_ORIGIN = 'http://localhost:3000';
  * The real AppModule with the same HTTP setup as main.ts, on an empty test database. Only the password hasher
  * changes: scrypt at the production cost takes about 128 MiB and a few hundred milliseconds per hash.
  */
-export async function createTestApp(): Promise<{ app: INestApplication<App>; dataSource: DataSource }> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+export async function createTestApp({
+  controllers = [],
+}: {
+  /** Extra test-only routes, for rules that apply to every route (the global guards). */
+  controllers?: Type[];
+} = {}): Promise<{ app: INestApplication<App>; dataSource: DataSource }> {
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule], controllers })
     .overrideProvider(PasswordHasher)
     .useValue(new PasswordHasher({ logN: 10 }))
     .compile();
@@ -37,4 +43,21 @@ export function sessionCookie(setCookie: string | string[] | undefined): string 
     throw new Error(`No session cookie in Set-Cookie: ${JSON.stringify(cookies)}`);
   }
   return session.split(';')[0];
+}
+
+/**
+ * An account written straight to the database, as the admin endpoints will create them (step 5).
+ * Returns the email and password to sign in with.
+ */
+export async function insertUser(
+  app: INestApplication,
+  fields: Partial<User> = {},
+): Promise<{ email: string; password: string }> {
+  const password = 'another long passphrase';
+  const passwordHash = await app.get(PasswordHasher).hash(password);
+  const user = await app
+    .get(DataSource)
+    .getRepository(User)
+    .save({ name: 'Grace Hopper', email: 'grace@example.com', passwordHash, ...fields });
+  return { email: user.email, password };
 }
