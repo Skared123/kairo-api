@@ -445,3 +445,91 @@ its sessions.
 **Consequences.** The admin never chooses a user's password, and still cannot use one for long: the forced change
 (decision 016) replaces it at the first sign-in. The lock serializes admin changes, which are rare.
 
+
+---
+
+## 018. kairo-web reaches the API through Next.js rewrites
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Context.** kairo-web runs on `localhost:3000` and the API on `localhost:4000`: two origins for the browser, which
+matters for the session cookie, CORS and the CSRF check.
+
+**Options.** Rewrites in `next.config.ts` that forward `/api/*` to the API; direct browser calls to the API with
+`credentials: 'include'`; or a Backend for Frontend with a route handler per endpoint.
+
+**Decision.** Rewrites. The browser only ever talks to kairo-web's origin, so the cookie is first-party and requests
+are same-origin. Server Components call the API directly (`API_URL`) and forward only the session cookie, never every
+incoming header, as the Next.js Backend for Frontend guide asks.
+
+**Consequences.** One origin in deployment too. CORS and `WEB_ORIGIN` on the API stay as a second line, for direct
+calls.
+
+---
+
+## 019. kairo-web reads in Server Components and writes from the client
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Context.** Next.js 16 renders Server Components by default; interactive parts are Client Components.
+
+**Options.** Reads in Server Components, mutations from Client Components through `/api` and then `router.refresh()`;
+everything client-side with TanStack Query; or Server Actions for mutations, which receive the API's `Set-Cookie`
+on the Next.js server and would have to copy it to the browser by hand.
+
+**Decision.** Reads in Server Components, mutations from the client. No data-fetching library for now.
+
+**Consequences.** No extra dependency, and the patterns of the official docs. TanStack Query can be added later where a
+screen needs client-side caching.
+
+---
+
+## 020. API types and client generated from OpenAPI
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Context.** The API publishes `/docs/openapi.json` (decision 007). The web app should stop compiling when the API
+changes, not fail in front of the user.
+
+**Options.** `openapi-typescript` for the types plus `openapi-fetch` as a small typed `fetch`; Orval or hey-api, which
+generate whole clients and React Query hooks; or hand-written types.
+
+**Decision.** `openapi-typescript` and `openapi-fetch`. `pnpm api:types` regenerates the types from the running API,
+and the generated file is committed.
+
+**Consequences.** Routes, bodies and responses are checked at compile time with a few KB of runtime code.
+
+---
+
+## 021. UI with Tailwind CSS 4 and shadcn/ui
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Options.** Tailwind with shadcn/ui, whose components (built on Radix) are copied into the repo; Tailwind alone, with
+every component and its accessibility built by hand; or a full library such as Mantine or MUI.
+
+**Decision.** Tailwind CSS 4 and shadcn/ui.
+
+**Consequences.** The component code lives in kairo-web and can be changed freely; accessibility comes from Radix.
+
+---
+
+## 022. kairo-web starts from the `create-next-app` defaults
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Context.** Next.js 16.4 asks for TypeScript, linter, React Compiler, Tailwind, `src/`, App Router, Cache Components,
+import alias and `AGENTS.md`.
+
+**Decision.** The recommended defaults: TypeScript, ESLint (with the Next.js rules), no React Compiler, Tailwind, no
+`src/`, App Router, Turbopack, Cache Components, `@/*`, and `AGENTS.md`. Agent feedback off. A web app manifest
+(`app/manifest.ts`) makes it installable with Safari's "Add to Dock".
+
+**Consequences.** With Cache Components, anything that reads the session sits behind `<Suspense>` and the rest of a
+page prerenders, following the "Authentication with Cache Components" guide. kairo-web lints with ESLint while the API
+uses oxlint.
