@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Emails are trimmed and lowercased before they are validated, so `Ray@Example.com ` and `ray@example.com` are the
  * same account (the users table refuses anything else). The metadata keeps the email format in the OpenAPI spec.
  */
-const email = z
+export const email = z
   .string()
   .trim()
   .toLowerCase()

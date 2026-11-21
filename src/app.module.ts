@@ -1,4 +1,5 @@
 import { AuthenticationModule } from '@nestjs/authentication';
+import { AuthorizationModule } from '@nestjs/authorization';
 import { Module, StandardSchemaValidationPipe } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,6 +9,7 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -33,7 +35,11 @@ import { buildDataSourceOptions } from './database/database.config.js';
         },
       }),
     }),
+    // Deny by default: every route needs @Can(), @Can.Anyone() or @Public(). It must come after AuthenticationModule,
+    // whose guard sets the user it checks; the module refuses to start otherwise.
+    AuthorizationModule.forRoot(),
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

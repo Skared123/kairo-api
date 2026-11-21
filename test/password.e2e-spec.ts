@@ -1,3 +1,4 @@
+import { Can } from '@nestjs/authorization';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -6,6 +7,7 @@ import { createTestApp, insertUser, sessionCookie } from './create-test-app.js';
 /** A plain signed-in route, standing in for the app's routes until v0.2 adds real ones. */
 @Controller('probe')
 class ProbeController {
+  @Can.Anyone()
   @Get()
   probe() {
     return 'ok';

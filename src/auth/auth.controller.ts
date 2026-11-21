@@ -1,4 +1,5 @@
 import { CurrentUser, Public, SessionService, SignInService } from '@nestjs/authentication';
+import { Can } from '@nestjs/authorization';
 import {
   Body,
   Controller,
@@ -31,7 +32,10 @@ import {
 import { CredentialsService } from './credentials.service.js';
 import { AllowPendingPasswordChange } from './password-change.guard.js';
 
-/** Signs users in and out. SignInService sets and clears the session cookie on the response itself. */
+/**
+ * Signs users in and out. SignInService sets and clears the session cookie on the response itself.
+ * Routes for signed-in users declare @Can.Anyone(): any account may use them, for itself.
+ */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -77,6 +81,7 @@ export class AuthController {
    * Changes the signed-in user's password. Whoever knew the old one may still be signed in somewhere, so this
    * browser's session gets a new id and every other session of the account ends.
    */
+  @Can.Anyone()
   @AllowPendingPasswordChange()
   @Post('password')
   @HttpCode(HttpStatus.OK)
@@ -100,6 +105,7 @@ export class AuthController {
   }
 
   /** Ends this browser's session and clears its cookie. */
+  @Can.Anyone()
   @AllowPendingPasswordChange()
   @Post('sign-out')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -108,6 +114,7 @@ export class AuthController {
     await this.signInService.signOut();
   }
 
+  @Can.Anyone()
   @AllowPendingPasswordChange()
   @Get('me')
   @ApiOkResponse({ standardSchema: authUserSchema })
