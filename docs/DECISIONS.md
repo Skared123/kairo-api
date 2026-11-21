@@ -533,3 +533,57 @@ import alias and `AGENTS.md`.
 **Consequences.** With Cache Components, anything that reads the session sits behind `<Suspense>` and the rest of a
 page prerenders, following the "Authentication with Cache Components" guide. kairo-web lints with ESLint while the API
 uses oxlint.
+
+---
+
+## 023. Spanish and English with next-intl, the locale in the URL
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Context.** Kairo is used daily in Spanish and shown in English as a portfolio piece. Adding languages later means
+hunting every hard-coded string across every screen.
+
+**Options.** One language now and translations later; both now with `next-intl`, the locale in the URL (`/es/...`,
+`/en/...`); or both with the locale in a cookie only. With Cache Components (decision 022), reading a cookie outside
+`<Suspense>` is a build error, and every translated string depends on the locale, so the cookie-only option would put
+the whole app behind a boundary and lose the prerendered pages.
+
+**Decision.** `next-intl` with prefix routing: a `[locale]` segment, `es` and `en`, Spanish by default. `proxy.ts`
+picks the first locale from the path, then the `NEXT_LOCALE` cookie, then the browser's languages. The locale reaches
+`i18n/request.ts` through `next/root-params`. Every UI string lives in `messages/es.json` and `messages/en.json`, typed
+so a missing or misspelled key does not compile.
+
+**Consequences.** Pages prerender once per locale. A screen writes `t('key')` instead of literal text. The language
+switcher keeps the current path and changes only its prefix.
+
+---
+
+## 024. Forms with React Hook Form and zod
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Options.** React 19's `useActionState` with no library, the API's 400 answers as the only validation; React Hook
+Form with zod through `@hookform/resolvers`; or TanStack Form.
+
+**Decision.** React Hook Form and zod 4, with shadcn/ui's `Field` components. Form schemas mirror the API's rules to
+give feedback while typing; their messages are translation keys.
+
+**Consequences.** The API still decides: its 400 and 409 answers are shown on the form too. The web app's schemas are
+written by hand and kept in line with the API's.
+
+---
+
+## 025. Light and dark theme with next-themes and a Switch
+
+- **Date:** 2026-11-20
+- **Status:** Accepted
+
+**Options.** Follow the operating system only, with CSS; or `next-themes`, which the shadcn/ui guide uses.
+
+**Decision.** `next-themes` with the `class` attribute, following the system until the user flips a shadcn/ui
+`Switch` between light and dark; the choice is remembered in the browser.
+
+**Consequences.** No flash of the wrong theme on load. The root `<html>` needs `suppressHydrationWarning`, because
+`next-themes` sets its class before React hydrates.
