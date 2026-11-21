@@ -70,5 +70,8 @@ Local layout: a plain parent folder (not a git repo) groups both clones.
 
 - No scraping or automation of LinkedIn, in any form.
 - Every record belongs to a user; no query may return another user's data. The admin role manages accounts but
-  cannot read other users' data.
+  cannot read other users' data. Every module that stores user data has an end-to-end test built on
+  `createTwoUsers()` (`test/two-users.ts`) proving one user cannot list, read, change or delete another's records.
+- Every route requires a session unless it is listed in `PUBLIC_ROUTES` (`test/authorization.e2e-spec.ts`), and
+  every route declares its authorization (`@Can()`, `@Can.Anyone()` or `@Public()`).
 - Model output is untrusted input and is validated before anything is saved.

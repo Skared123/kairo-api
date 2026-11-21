@@ -9,8 +9,13 @@ export default function setup(): void {
   const DATABASE_URL = testDatabaseUrl();
 
   execFileSync('pnpm', ['build'], { stdio: 'inherit' });
-  execFileSync('node', ['node_modules/typeorm/cli.js', 'migration:run', '-d', 'dist/database/data-source.js'], {
-    stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL },
-  });
+  try {
+    execFileSync('node', ['node_modules/typeorm/cli.js', 'migration:run', '-d', 'dist/database/data-source.js'], {
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL },
+    });
+  } catch {
+    // The CLI already printed the cause above; this says what usually fixes it.
+    throw new Error('Could not migrate the test database. Is it running? Start it with `pnpm db:up`.');
+  }
 }

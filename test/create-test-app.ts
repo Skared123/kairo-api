@@ -46,7 +46,7 @@ export function sessionCookie(setCookie: string | string[] | undefined): string 
 }
 
 /**
- * An account written straight to the database, as the admin endpoints will create them (step 5).
+ * An account written straight to the database, skipping the admin endpoints.
  * Returns the email and password to sign in with.
  */
 export async function insertUser(
