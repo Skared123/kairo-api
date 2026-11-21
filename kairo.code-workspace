@@ -1,0 +1,113 @@
+{
+  // Opens kairo-api and kairo-web together in VS Code or any editor built on it, such as Antigravity.
+  // Run a task with Terminal > Run Task… (or Cmd+Shift+P, "Tasks: Run Task"). "Kairo: start all" starts everything.
+  "folders": [
+    { "name": "kairo-api", "path": "." },
+    { "name": "kairo-web", "path": "../kairo-web" }
+  ],
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Kairo: start all",
+        "detail": "Database, API on :4000 and web app on :3000",
+        "dependsOn": ["API: dev", "Web: dev"],
+        "dependsOrder": "parallel",
+        "problemMatcher": []
+      },
+      {
+        "label": "DB: up",
+        "detail": "Starts PostgreSQL in Docker and waits until it is healthy",
+        "type": "shell",
+        "command": "pnpm db:up",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "DB: down",
+        "type": "shell",
+        "command": "pnpm db:down",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "API: migrate",
+        "detail": "Applies pending migrations to the development database",
+        "type": "shell",
+        "command": "pnpm migration:run",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "dependsOn": ["DB: up"],
+        "problemMatcher": []
+      },
+      {
+        "label": "API: dev",
+        "detail": "API on http://localhost:4000, restarts on changes",
+        "type": "shell",
+        "command": "pnpm start:dev",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "dependsOn": ["API: migrate"],
+        "isBackground": true,
+        "presentation": { "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "API: test",
+        "type": "shell",
+        "command": "pnpm test",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "API: test e2e",
+        "detail": "End-to-end tests against kairo_test",
+        "type": "shell",
+        "command": "pnpm test:e2e",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "dependsOn": ["DB: up"],
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "API: lint",
+        "type": "shell",
+        "command": "pnpm lint",
+        "options": { "cwd": "${workspaceFolder:kairo-api}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Web: dev",
+        "detail": "Web app on http://localhost:3000",
+        "type": "shell",
+        "command": "pnpm dev",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "isBackground": true,
+        "presentation": { "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Web: api types",
+        "detail": "Regenerates the API types; the API must be running",
+        "type": "shell",
+        "command": "pnpm api:types",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Web: lint",
+        "type": "shell",
+        "command": "pnpm lint",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "problemMatcher": []
+      },
+      {
+        "label": "Web: build",
+        "type": "shell",
+        "command": "pnpm build",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "group": "build",
+        "problemMatcher": []
+      }
+    ]
+  }
+}

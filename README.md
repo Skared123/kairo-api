@@ -47,6 +47,12 @@ pnpm start:dev
 
   After that, the endpoint is closed for good, and only the admin creates accounts.
 
+## Editor
+
+`kairo.code-workspace` opens `kairo-api` and `kairo-web` together in VS Code or an editor built on it, such as
+Antigravity, with both repositories cloned side by side. Its tasks (**Terminal → Run Task…**) start the database, the
+API and the web app, run the tests and regenerate the web app's API types. **Kairo: start all** starts everything.
+
 ## Accounts and security
 
 - **Sessions** live in PostgreSQL and travel in an `HttpOnly` cookie, `__Host-sid`. They last 14 days, or end after
