@@ -31,7 +31,7 @@ that fit my current commitments, contract type). Each posting is measured agains
 | Module | What it does | How it connects |
 |---|---|---|
 | **Accounts** | Login and two roles: `admin` manages accounts, `user` uses the app. The first account to register becomes admin; after that, only the admin creates accounts | Every other module reads the current user. The admin manages accounts but cannot see anyone's data |
-| **Jobs** | Track every posting through stages (to review, to apply, applied, interview, offer, discarded) and compare it with my criteria | The center: every other module feeds from it |
+| **Jobs** | Track every posting through stages (to review, to apply, applied, interviewing, offer, accepted, rejected, discarded) and compare it with my criteria | The center: every other module feeds from it |
 | **Today** | What I have to do today | Pulls in due follow-ups, upcoming interviews and their prep, manual tasks and one study item |
 | **Contacts** | Who I talked to at each company and when to write again | Follow-up reminders show up in Today |
 | **Learning** | Videos, courses, articles and side projects to work on, with status and the skill each one trains | Later, skill gaps found in postings become study items |
@@ -89,3 +89,4 @@ is reviewed and each idea is either scheduled into the roadmap or dropped.
   localhost. Proposed after v0.1.
 - **Tell users when the admin resets their password.** A notice at sign-in ("your password was reset by the admin on
   …"), so a takeover by the admin is noticed (decision 026). Before any public deployment.
+- **Jobs board.** A kanban view of the jobs by stage, with drag and drop, on top of the v0.2 API (decision 030).

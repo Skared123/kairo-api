@@ -633,3 +633,73 @@ empties `kairo_test` with `pg`, refusing any database whose name does not end in
 
 **Consequences.** The web end-to-end tests need the API repository cloned next to this one and the database up.
 WebKit (Safari) can be added later as another Playwright project.
+
+---
+
+## 028. Job stages, with "rejected" apart from "discarded", and their history
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** `docs/IDEA.md` listed six stages: to review, to apply, applied, interview, offer, discarded. Metrics
+(v0.9) will need the response rate and the time between stages.
+
+**Options.** The six stages, with only the current one stored; or the stages with "rejected" (the company said no)
+apart from "discarded" (the user dropped it), "accepted" as the happy ending, and every stage change kept with its date.
+
+**Decision.** Eight stages: `to_review`, `to_apply`, `applied`, `interviewing`, `offer`, `accepted`, `rejected` and
+`discarded`. Every change is recorded in `job_stage_changes` (from, to, when), in the same transaction as the change.
+
+**Consequences.** A job can move between any two stages; the history keeps the path. Metrics can tell "the company
+said no" from "I dropped it" and measure time in each stage, data that could not be rebuilt later.
+
+---
+
+## 029. Salaries as integer ranges, compared only in the same currency and period
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** Postings state salaries in different currencies (MXN, USD…) and periods (monthly, yearly), and each
+user has a target (the criteria).
+
+**Options.** Store a free-text salary; or integer minimum and maximum with a currency and a period, compared with the
+target only when both match; or convert currencies through an exchange-rate service.
+
+**Decision.** `salary_min` and `salary_max` as integers in whole units, `salary_currency` (ISO 4217, such as `MXN`)
+and `salary_period` (`month` or `year`). A job meets the salary criterion when its maximum reaches the target in the
+same currency and period; a different currency or period answers "not comparable", with no conversion.
+
+**Consequences.** No external service and no stale exchange rates. A posting in another currency is shown as not
+comparable instead of being guessed. The target lives only in the database, never in the repository.
+
+---
+
+## 030. The jobs list is a table with stage tabs; a board comes later
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Options.** A table with a tab per stage, search and sorting; or a kanban board with drag and drop, which needs a
+library such as dnd-kit and much more work.
+
+**Decision.** A table with stage tabs, search by company or title, and sorting by next follow-up. The board goes to
+the ideas backlog.
+
+**Consequences.** v0.2 ships sooner with a view that scales to many jobs. The board can be added on top of the same API.
+
+---
+
+## 031. Duplicate detection with pg_trgm, implemented by Raymundo
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** The same posting is easy to save twice, from LinkedIn and from the company's site. This is a task the
+author implements himself (`TODO(Raymundo)`), with hints and a code review.
+
+**Decision.** When a job is created, the API warns about the user's jobs with the same URL, or with a company and a
+title similar enough according to PostgreSQL's `pg_trgm` similarity. It warns, never blocks. It is the last API step
+of v0.2: a migration enables the extension and the code leaves a `TODO(Raymundo)` where the query goes.
+
+**Consequences.** The check only ever looks at the current user's jobs. Tests prove it, as for every module.
