@@ -55,11 +55,13 @@ export class JobsService {
     return this.stageChanges.find({ where: { jobId: id }, order: { changedAt: 'ASC' } });
   }
 
-  list(userId: string, { status, q }: ListJobsQuery): Promise<Job[]> {
-    const query = this.jobs
-      .createQueryBuilder('job')
-      .where('job.userId = :userId', { userId })
-      .orderBy('job.updatedAt', 'DESC');
+  list(userId: string, { status, q, sort }: ListJobsQuery): Promise<Job[]> {
+    const query = this.jobs.createQueryBuilder('job').where('job.userId = :userId', { userId });
+    if (sort === 'followUp') {
+      query.orderBy('job.nextFollowUpOn', 'ASC', 'NULLS LAST').addOrderBy('job.updatedAt', 'DESC');
+    } else {
+      query.orderBy('job.updatedAt', 'DESC');
+    }
     if (status) {
       query.andWhere('job.status = :status', { status });
     }

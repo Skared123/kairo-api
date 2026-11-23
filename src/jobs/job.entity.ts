@@ -29,6 +29,7 @@ import {
  */
 @Entity('jobs')
 @Index('jobs_user_id_idx', ['userId'])
+@Index('jobs_user_id_next_follow_up_on_idx', ['userId', 'nextFollowUpOn'])
 @Check('jobs_salary_range', '"salary_min" IS NULL OR "salary_max" IS NULL OR "salary_min" <= "salary_max"')
 @Check('jobs_salary_currency_format', `"salary_currency" ~ '^[A-Z]{3}$'`)
 // An amount needs its currency and period to mean anything (decision 029).
@@ -97,6 +98,14 @@ export class Job {
 
   @Column({ type: 'enum', enum: JOB_STATUSES, enumName: 'job_status', default: 'to_review' })
   status: JobStatus;
+
+  /** The day to act on this job next, as YYYY-MM-DD: a calendar day, with no time zone. Today (v0.3) lists them. */
+  @Column({ type: 'date', nullable: true })
+  nextFollowUpOn: string | null;
+
+  /** What to do that day. */
+  @Column({ type: 'text', nullable: true })
+  nextFollowUpNote: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

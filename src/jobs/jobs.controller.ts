@@ -37,6 +37,7 @@ import {
   type StageChangeResponse,
   type UpdateJobDto,
 } from './jobs.schemas.js';
+import { CriteriaService } from './criteria.service.js';
 import { JobsService } from './jobs.service.js';
 
 /**
@@ -47,7 +48,10 @@ import { JobsService } from './jobs.service.js';
 @Can.Anyone()
 @Controller('jobs')
 export class JobsController {
-  constructor(private readonly jobs: JobsService) {}
+  constructor(
+    private readonly jobs: JobsService,
+    private readonly criteria: CriteriaService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ standardSchema: jobSchema, isArray: true })
@@ -55,14 +59,18 @@ export class JobsController {
     @CurrentUser('id') userId: string,
     @Query({ schema: listJobsQuerySchema }) query: ListJobsQuery,
   ): Promise<JobResponse[]> {
-    return (await this.jobs.list(userId, query)).map(toJobResponse);
+    const [jobs, criteria] = await Promise.all([this.jobs.list(userId, query), this.criteria.get(userId)]);
+    return jobs.map((job) => toJobResponse(job, criteria));
   }
 
   @Post()
   @ApiCreatedResponse({ standardSchema: jobSchema })
   @ApiBadRequestResponse({ description: 'Invalid fields, or a salary without its currency and period' })
-  async create(@CurrentUser('id') userId: string, @Body({ schema: createJobSchema }) body: CreateJobDto) {
-    return toJobResponse(await this.jobs.create(userId, body));
+  async create(
+    @CurrentUser('id') userId: string,
+    @Body({ schema: createJobSchema }) body: CreateJobDto,
+  ): Promise<JobResponse> {
+    return toJobResponse(await this.jobs.create(userId, body), await this.criteria.get(userId));
   }
 
   @Get(':id')
@@ -72,7 +80,7 @@ export class JobsController {
     @CurrentUser('id') userId: string,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<JobResponse> {
-    return toJobResponse(await this.jobs.findOne(userId, id));
+    return toJobResponse(await this.jobs.findOne(userId, id), await this.criteria.get(userId));
   }
 
   @Patch(':id')
@@ -83,7 +91,7 @@ export class JobsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body({ schema: updateJobSchema }) body: UpdateJobDto,
   ): Promise<JobResponse> {
-    return toJobResponse(await this.jobs.update(userId, id, body));
+    return toJobResponse(await this.jobs.update(userId, id, body), await this.criteria.get(userId));
   }
 
   /** Moves the job to another stage; the move is recorded in its history (decision 028). */
@@ -96,7 +104,7 @@ export class JobsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body({ schema: changeStatusSchema }) { status }: ChangeStatusDto,
   ): Promise<JobResponse> {
-    return toJobResponse(await this.jobs.changeStatus(userId, id, status));
+    return toJobResponse(await this.jobs.changeStatus(userId, id, status), await this.criteria.get(userId));
   }
 
   @Get(':id/history')
