@@ -9,6 +9,7 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
+import { JobsModule } from './jobs/jobs.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -40,6 +41,7 @@ import { UsersModule } from './users/users.module.js';
     AuthorizationModule.forRoot(),
     AuthModule,
     UsersModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [
