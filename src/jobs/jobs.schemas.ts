@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CONTRACT_TYPES, JOB_SOURCES, JOB_STATUSES, SALARY_PERIODS, WORK_MODES } from './job.enums.js';
+import type { JobStageChange } from './job-stage-change.entity.js';
 import type { Job } from './job.entity.js';
 
 /** Optional free text: trimmed, and an empty string clears it (forms send "" for an empty field). */
@@ -15,7 +16,7 @@ function text(max: number) {
 
 const salaryAmount = z.int().min(0).max(100_000_000).nullable().optional();
 
-/** The fields a user writes. Status moves through its own endpoint (step 2), so updates leave it out. */
+/** The fields a user writes. Status moves through POST /jobs/:id/status (decision 028), so updates leave it out. */
 const jobFields = {
   company: z.string().trim().min(1).max(200),
   title: z.string().trim().min(1).max(200),
@@ -99,4 +100,19 @@ export function toJobResponse(job: Job): JobResponse {
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   };
+}
+
+export const changeStatusSchema = z.strictObject({ status: z.enum(JOB_STATUSES) });
+export type ChangeStatusDto = z.infer<typeof changeStatusSchema>;
+
+export const stageChangeSchema = z.object({
+  /** Null for the first entry, when the job was created. */
+  fromStatus: z.enum(JOB_STATUSES).nullable(),
+  toStatus: z.enum(JOB_STATUSES),
+  changedAt: z.iso.datetime(),
+});
+export type StageChangeResponse = z.infer<typeof stageChangeSchema>;
+
+export function toStageChangeResponse({ fromStatus, toStatus, changedAt }: JobStageChange): StageChangeResponse {
+  return { fromStatus, toStatus, changedAt: changedAt.toISOString() };
 }

@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { Repository } from 'typeorm';
+import { DataSource, type Repository } from 'typeorm';
+import { JobStageChange } from './job-stage-change.entity.js';
+import type { JobStatus } from './job.enums.js';
 import { Job } from './job.entity.js';
 import type { CreateJobDto, ListJobsQuery, UpdateJobDto } from './jobs.schemas.js';
 
@@ -10,12 +12,47 @@ import type { CreateJobDto, ListJobsQuery, UpdateJobDto } from './jobs.schemas.j
  */
 @Injectable()
 export class JobsService {
-  constructor(@InjectRepository(Job) private readonly jobs: Repository<Job>) {}
+  constructor(
+    @InjectRepository(Job) private readonly jobs: Repository<Job>,
+    @InjectRepository(JobStageChange) private readonly stageChanges: Repository<JobStageChange>,
+    private readonly dataSource: DataSource,
+  ) {}
 
+  /** Creates the job and its first history entry together (decision 028). */
   async create(userId: string, dto: CreateJobDto): Promise<Job> {
     const job = this.jobs.create({ ...dto, userId });
     assertSalaryIsComplete(job);
-    return this.jobs.save(job);
+    return this.dataSource.transaction(async (manager) => {
+      const saved = await manager.save(job);
+      await manager.insert(JobStageChange, { jobId: saved.id, fromStatus: null, toStatus: saved.status });
+      return saved;
+    });
+  }
+
+  /**
+   * Moves the job to another stage and records the move in the same transaction, so no change escapes the history
+   * (decision 028). The row is locked first: two concurrent moves record the right "from" stage one after the other.
+   * Moving to the current stage changes nothing and records nothing.
+   */
+  async changeStatus(userId: string, id: string, status: JobStatus): Promise<Job> {
+    return this.dataSource.transaction(async (manager) => {
+      const job = await manager.findOne(Job, { where: { id, userId }, lock: { mode: 'pessimistic_write' } });
+      if (!job) {
+        throw new NotFoundException('Job not found');
+      }
+      if (job.status === status) {
+        return job;
+      }
+      await manager.insert(JobStageChange, { jobId: job.id, fromStatus: job.status, toStatus: status });
+      job.status = status;
+      return manager.save(job);
+    });
+  }
+
+  /** The job's moves, oldest first. Checks ownership first, like every other method. */
+  async history(userId: string, id: string): Promise<JobStageChange[]> {
+    await this.findOne(userId, id);
+    return this.stageChanges.find({ where: { jobId: id }, order: { changedAt: 'ASC' } });
   }
 
   list(userId: string, { status, q }: ListJobsQuery): Promise<Job[]> {

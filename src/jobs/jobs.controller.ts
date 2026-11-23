@@ -22,14 +22,19 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  changeStatusSchema,
   createJobSchema,
   jobSchema,
   listJobsQuerySchema,
+  stageChangeSchema,
   toJobResponse,
+  toStageChangeResponse,
   updateJobSchema,
+  type ChangeStatusDto,
   type CreateJobDto,
   type JobResponse,
   type ListJobsQuery,
+  type StageChangeResponse,
   type UpdateJobDto,
 } from './jobs.schemas.js';
 import { JobsService } from './jobs.service.js';
@@ -79,6 +84,29 @@ export class JobsController {
     @Body({ schema: updateJobSchema }) body: UpdateJobDto,
   ): Promise<JobResponse> {
     return toJobResponse(await this.jobs.update(userId, id, body));
+  }
+
+  /** Moves the job to another stage; the move is recorded in its history (decision 028). */
+  @Post(':id/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ standardSchema: jobSchema })
+  @ApiNotFoundResponse({ description: 'Job not found' })
+  async changeStatus(
+    @CurrentUser('id') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body({ schema: changeStatusSchema }) { status }: ChangeStatusDto,
+  ): Promise<JobResponse> {
+    return toJobResponse(await this.jobs.changeStatus(userId, id, status));
+  }
+
+  @Get(':id/history')
+  @ApiOkResponse({ standardSchema: stageChangeSchema, isArray: true })
+  @ApiNotFoundResponse({ description: 'Job not found' })
+  async history(
+    @CurrentUser('id') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<StageChangeResponse[]> {
+    return (await this.jobs.history(userId, id)).map(toStageChangeResponse);
   }
 
   @Delete(':id')
