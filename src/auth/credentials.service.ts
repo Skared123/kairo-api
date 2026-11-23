@@ -1,7 +1,8 @@
 import { PasswordHasher } from '@nestjs/authentication';
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, type Repository } from 'typeorm';
+import { hasExpiredTemporaryPassword } from '../users/temporary-password.js';
 import { User } from '../users/user.entity.js';
 import type { ChangePasswordDto, SetupDto } from './auth.schemas.js';
 
@@ -45,7 +46,8 @@ export class CredentialsService {
 
   /**
    * The active user with this email and password, or null. Unknown emails, wrong passwords and deactivated accounts
-   * all get null, and take the same time, so the answer reveals nothing about which accounts exist.
+   * all get null, and take the same time, so the answer reveals nothing about which accounts exist. A right but
+   * expired temporary password is a 403 (decision 026).
    */
   async verify(email: string, password: string): Promise<User | null> {
     const user = await this.users.findOneBy({ email });
@@ -53,6 +55,14 @@ export class CredentialsService {
     const valid = await this.passwordHasher.verify(password, user?.passwordHash);
     if (!valid || !user || user.deactivatedAt) {
       return null;
+    }
+    // Only after the password matched, so the answer reveals nothing to someone guessing (decision 026).
+    if (hasExpiredTemporaryPassword(user)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'temporary_password_expired',
+        message: 'This temporary password has expired. Ask the admin for a new one.',
+      });
     }
 
     // The hashing cost was raised since this hash was stored: upgrade it while we have the plaintext.
@@ -74,6 +84,7 @@ export class CredentialsService {
 
     user.passwordHash = await this.passwordHasher.hash(newPassword);
     user.mustChangePassword = false;
+    user.temporaryPasswordExpiresAt = null;
     return this.users.save(user);
   }
 }

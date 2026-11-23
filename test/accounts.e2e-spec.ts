@@ -100,7 +100,17 @@ describe('Admin accounts (e2e)', () => {
       const res = await http.get('/admin/users').set('Cookie', adminCookie).expect(200);
       expect(res.body.map((account: { email: string }) => account.email)).toEqual([admin.email, 'grace@example.com']);
       expect(Object.keys(res.body[1]).sort()).toEqual(
-        ['active', 'createdAt', 'deactivatedAt', 'email', 'id', 'mustChangePassword', 'name', 'role'].sort(),
+        [
+          'active',
+          'createdAt',
+          'deactivatedAt',
+          'email',
+          'id',
+          'mustChangePassword',
+          'name',
+          'role',
+          'temporaryPasswordExpiresAt',
+        ].sort(),
       );
     });
   });

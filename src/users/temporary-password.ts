@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import type { User } from './user.entity.js';
 
 // Lowercase letters and digits without look-alikes (0/o, 1/l/i), so the password can be read out or copied by hand.
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -12,4 +13,20 @@ export function generateTemporaryPassword(): string {
     Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join(''),
   );
   return groups.join('-');
+}
+
+/** How long a temporary password works after the admin creates or resets the account (decision 026). */
+export const TEMPORARY_PASSWORD_TTL_MS = 72 * 60 * 60 * 1000;
+
+/** When a temporary password handed out now stops working. */
+export function temporaryPasswordExpiry(now = new Date()): Date {
+  return new Date(now.getTime() + TEMPORARY_PASSWORD_TTL_MS);
+}
+
+/** Whether the account still uses a temporary password that has stopped working (decision 026). */
+export function hasExpiredTemporaryPassword(
+  user: Pick<User, 'mustChangePassword' | 'temporaryPasswordExpiresAt'>,
+  now = new Date(),
+): boolean {
+  return user.mustChangePassword && user.temporaryPasswordExpiresAt !== null && user.temporaryPasswordExpiresAt <= now;
 }

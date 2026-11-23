@@ -587,3 +587,27 @@ written by hand and kept in line with the API's.
 
 **Consequences.** No flash of the wrong theme on load. The root `<html>` needs `suppressHydrationWarning`, because
 `next-themes` sets its class before React hydrates.
+
+---
+
+## 026. Temporary passwords expire after 72 hours
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** A temporary password (decision 017) stays pending until the user changes it (decision 016), and until now
+it never stopped working. One handed out over a chat and never used stayed valid for months. Reviewing this also
+showed a limit decision 016 does not state: the admin knows each temporary password and can reset any account, so the
+admin can always change a user's password and sign in as them. The forced change keeps the admin from using a
+temporary password unnoticed for long, not from taking an account over.
+
+**Options.** Temporary passwords that expire; telling the user when the admin reset their password, so a takeover is
+noticed; or documenting the limit only.
+
+**Decision.** A temporary password expires 72 hours after the admin creates or resets the account
+(`users.temporary_password_expires_at`). After that, sign-in with it answers 403 `temporary_password_expired`, and any
+session it opened ends, so a new one has to come from the admin. Changing the password clears the expiry. Telling
+the user about resets goes to the ideas backlog, before any public deployment.
+
+**Consequences.** A forgotten temporary password stops working on its own. The admin sees each account's expiry in
+`GET /admin/users` and resets it when needed.

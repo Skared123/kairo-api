@@ -3,7 +3,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Not, QueryFailedError, type Repository } from 'typeorm';
 import type { CreateAccountDto, UpdateAccountDto } from './accounts.schemas.js';
-import { generateTemporaryPassword } from './temporary-password.js';
+import { generateTemporaryPassword, temporaryPasswordExpiry } from './temporary-password.js';
 import { User, type UserRole } from './user.entity.js';
 
 /** Key of the advisory lock that serializes role and status changes (decision 017). */
@@ -37,13 +37,20 @@ export class AccountsService {
     return this.users.find({ order: { createdAt: 'ASC' } });
   }
 
-  /** Creates the account with a generated temporary password, which the caller shows once. */
+  /** Creates the account with a generated temporary password, which the caller shows once; it expires in 72 h. */
   async create({ name, email, role }: CreateAccountDto): Promise<{ user: User; temporaryPassword: string }> {
     const temporaryPassword = generateTemporaryPassword();
     const passwordHash = await this.passwordHasher.hash(temporaryPassword);
     try {
       const user = await this.users.save(
-        this.users.create({ name, email, role, passwordHash, mustChangePassword: true }),
+        this.users.create({
+          name,
+          email,
+          role,
+          passwordHash,
+          mustChangePassword: true,
+          temporaryPasswordExpiresAt: temporaryPasswordExpiry(),
+        }),
       );
       return { user, temporaryPassword };
     } catch (error) {
@@ -94,11 +101,17 @@ export class AccountsService {
     return user;
   }
 
-  /** Replaces a forgotten password with a new temporary one, forces a change and ends the account's sessions. */
+  /**
+   * Replaces a forgotten (or expired) password with a new temporary one that works for 72 h, forces a change and
+   * ends the account's sessions.
+   */
   async resetPassword(id: string): Promise<string> {
     const temporaryPassword = generateTemporaryPassword();
     const passwordHash = await this.passwordHasher.hash(temporaryPassword);
-    const { affected } = await this.users.update({ id }, { passwordHash, mustChangePassword: true });
+    const { affected } = await this.users.update(
+      { id },
+      { passwordHash, mustChangePassword: true, temporaryPasswordExpiresAt: temporaryPasswordExpiry() },
+    );
     if (!affected) {
       throw new NotFoundException('Account not found');
     }

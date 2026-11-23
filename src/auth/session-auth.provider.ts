@@ -2,6 +2,7 @@ import { AuthenticationRegistry, SessionCookieProvider, type SessionRecord } fro
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, type Repository } from 'typeorm';
+import { hasExpiredTemporaryPassword } from '../users/temporary-password.js';
 import { User } from '../users/user.entity.js';
 import { toAuthUser, type AuthUser } from './auth-user.js';
 
@@ -18,11 +19,11 @@ export class SessionAuth extends SessionCookieProvider<AuthUser> {
   }
 
   /**
-   * Runs on every request with a live session. Null for a deleted or deactivated account, which ends the session,
-   * so losing access takes effect on the next request.
+   * Runs on every request with a live session. Null for a deleted or deactivated account, or one whose temporary
+   * password expired (decision 026), which ends the session, so losing access takes effect on the next request.
    */
   async validate(session: SessionRecord): Promise<AuthUser | null> {
     const user = await this.users.findOneBy({ id: session.userId, deactivatedAt: IsNull() });
-    return user ? toAuthUser(user) : null;
+    return user && !hasExpiredTemporaryPassword(user) ? toAuthUser(user) : null;
   }
 }

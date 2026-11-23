@@ -13,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
@@ -68,6 +69,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ standardSchema: authUserSchema })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
+  @ApiForbiddenResponse({ description: 'temporary_password_expired: ask the admin for a new temporary password' })
   async signIn(@Body({ schema: signInSchema }) body: SignInDto): Promise<AuthUser> {
     const user = await this.credentials.verify(body.email, body.password);
     if (!user) {

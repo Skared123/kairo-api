@@ -28,9 +28,13 @@ export class User {
   @Column({ type: 'enum', enum: USER_ROLES, enumName: 'user_role', default: 'user' })
   role: UserRole;
 
-  /** True for accounts an admin created with a temporary password (decision 011). */
+  /** True for accounts an admin created or reset with a temporary password (decision 016). */
   @Column({ type: 'boolean', default: false })
   mustChangePassword: boolean;
+
+  /** When the temporary password stops working (decision 026). Null when the user chose their own password. */
+  @Column({ type: 'timestamptz', nullable: true })
+  temporaryPasswordExpiresAt: Date | null;
 
   /** Null while the account is active. */
   @Column({ type: 'timestamptz', nullable: true })

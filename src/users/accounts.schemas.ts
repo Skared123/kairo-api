@@ -11,6 +11,8 @@ export const accountSchema = z.object({
   active: z.boolean(),
   /** Still using the temporary password the admin handed out. */
   mustChangePassword: z.boolean(),
+  /** When that temporary password stops working; null once the user chose their own (decision 026). */
+  temporaryPasswordExpiresAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   deactivatedAt: z.iso.datetime().nullable(),
 });
@@ -24,6 +26,7 @@ export function toAccount(user: User): Account {
     role: user.role,
     active: user.deactivatedAt === null,
     mustChangePassword: user.mustChangePassword,
+    temporaryPasswordExpiresAt: user.temporaryPasswordExpiresAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
   };
