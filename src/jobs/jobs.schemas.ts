@@ -119,6 +119,24 @@ export function toJobResponse(job: Job, criteria: CriteriaForMatch): JobResponse
   };
 }
 
+/** A job that may be the same posting as one just saved (decision 031): enough to recognize it and open it. */
+export const possibleDuplicateSchema = z.object({
+  id: z.uuid(),
+  company: z.string(),
+  title: z.string(),
+  url: z.string().nullable(),
+  status: z.enum(JOB_STATUSES),
+});
+export type PossibleDuplicate = z.infer<typeof possibleDuplicateSchema>;
+
+/** What POST /jobs answers: the new job, and the user's jobs that may be the same posting. It warns, never blocks. */
+export const createdJobSchema = jobSchema.extend({ possibleDuplicates: z.array(possibleDuplicateSchema) });
+export type CreatedJobResponse = z.infer<typeof createdJobSchema>;
+
+export function toPossibleDuplicate({ id, company, title, url, status }: Job): PossibleDuplicate {
+  return { id, company, title, url, status };
+}
+
 export const changeStatusSchema = z.strictObject({ status: z.enum(JOB_STATUSES) });
 export type ChangeStatusDto = z.infer<typeof changeStatusSchema>;
 

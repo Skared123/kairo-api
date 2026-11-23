@@ -49,6 +49,33 @@ export class JobsService {
     });
   }
 
+  /**
+   * The user's other jobs that may be the same posting as `job`, which was just saved (decision 031). Warns, never
+   * blocks: POST /jobs answers them as `possibleDuplicates`.
+   *
+   * TODO(Raymundo): implement it. Until then it finds nothing.
+   *
+   * What it must do:
+   * - Look only at this user's jobs (`userId`), never anyone else's. The isolation test must prove it.
+   * - Leave out `job` itself.
+   * - Count as a possible duplicate a job with the same URL, or with a company and a title similar enough to `job`'s.
+   * - Return the closest matches first, and only a few of them.
+   *
+   * Where to look:
+   * - pg_trgm is enabled (migration EnablePgTrgm). Read its docs: https://www.postgresql.org/docs/current/pgtrgm.html,
+   *   especially `similarity()`, the `%` operator and `pg_trgm.similarity_threshold`.
+   * - Decide the threshold with examples, in `psql` (`pnpm db:up`, then `docker exec -it kairo-db psql -U kairo`).
+   * - The query builder in `list()` above shows how this service filters by user and passes parameters safely.
+   * - With many jobs, think about whether an index would help (pg_trgm offers GIN and GiST ones) and how you would
+   *   check it (`EXPLAIN ANALYZE`). If you add one, it goes in a migration.
+   * - The tests go in test/job-duplicates.e2e-spec.ts, which lists the cases to cover.
+   */
+  async findPossibleDuplicates(userId: string, job: Job): Promise<Job[]> {
+    void userId;
+    void job;
+    return [];
+  }
+
   /** The job's moves, oldest first. Checks ownership first, like every other method. */
   async history(userId: string, id: string): Promise<JobStageChange[]> {
     await this.findOne(userId, id);

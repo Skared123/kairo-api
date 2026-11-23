@@ -23,14 +23,17 @@ import {
 } from '@nestjs/swagger';
 import {
   changeStatusSchema,
+  createdJobSchema,
   createJobSchema,
   jobSchema,
   listJobsQuerySchema,
   stageChangeSchema,
   toJobResponse,
+  toPossibleDuplicate,
   toStageChangeResponse,
   updateJobSchema,
   type ChangeStatusDto,
+  type CreatedJobResponse,
   type CreateJobDto,
   type JobResponse,
   type ListJobsQuery,
@@ -63,14 +66,20 @@ export class JobsController {
     return jobs.map((job) => toJobResponse(job, criteria));
   }
 
+  /** Creates the job and lists the user's jobs that may be the same posting (decision 031). */
   @Post()
-  @ApiCreatedResponse({ standardSchema: jobSchema })
+  @ApiCreatedResponse({ standardSchema: createdJobSchema })
   @ApiBadRequestResponse({ description: 'Invalid fields, or a salary without its currency and period' })
   async create(
     @CurrentUser('id') userId: string,
     @Body({ schema: createJobSchema }) body: CreateJobDto,
-  ): Promise<JobResponse> {
-    return toJobResponse(await this.jobs.create(userId, body), await this.criteria.get(userId));
+  ): Promise<CreatedJobResponse> {
+    const job = await this.jobs.create(userId, body);
+    const [duplicates, criteria] = await Promise.all([
+      this.jobs.findPossibleDuplicates(userId, job),
+      this.criteria.get(userId),
+    ]);
+    return { ...toJobResponse(job, criteria), possibleDuplicates: duplicates.map(toPossibleDuplicate) };
   }
 
   @Get(':id')

@@ -53,7 +53,10 @@ describe('Jobs (e2e)', () => {
       });
       expect(job).not.toHaveProperty('userId');
 
-      await http.get(`/jobs/${job.id}`).set('Cookie', ada.cookie).expect(200, job);
+      // The same job, read back; only the answer to POST lists possible duplicates (decision 031).
+      const { possibleDuplicates, ...saved } = job;
+      expect(possibleDuplicates).toEqual([]);
+      await http.get(`/jobs/${job.id}`).set('Cookie', ada.cookie).expect(200, saved);
     });
 
     it('normalizes the salary currency and keeps the whole posting', async () => {
