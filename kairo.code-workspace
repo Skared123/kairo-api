@@ -101,6 +101,24 @@
         "problemMatcher": []
       },
       {
+        "label": "Web: test",
+        "type": "shell",
+        "command": "pnpm test",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
+        "label": "Web: test e2e",
+        "detail": "Playwright against its own API (4100) and web build (3100) on kairo_test",
+        "type": "shell",
+        "command": "pnpm test:e2e",
+        "options": { "cwd": "${workspaceFolder:kairo-web}" },
+        "dependsOn": ["DB: up"],
+        "group": "test",
+        "problemMatcher": []
+      },
+      {
         "label": "Web: build",
         "type": "shell",
         "command": "pnpm build",

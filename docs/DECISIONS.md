@@ -611,3 +611,25 @@ the user about resets goes to the ideas backlog, before any public deployment.
 
 **Consequences.** A forgotten temporary password stops working on its own. The admin sees each account's expiry in
 `GET /admin/users` and resets it when needed.
+
+---
+
+## 027. kairo-web tests: Playwright for flows, Vitest for logic
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** Every web step so far was checked by hand in a browser. Vitest does not support async Server Components
+yet, which most kairo-web pages are, so the Next.js testing guide recommends end-to-end tests for them.
+
+**Options.** For flows: Playwright, Cypress, or manual checks. For logic: Vitest on pure functions, Vitest with
+Testing Library on components, or nothing. For browsers: Chromium only, or Chromium, Firefox and WebKit.
+
+**Decision.** Playwright (Chromium only for now) for the user flows, and Vitest for pure logic such as the form
+schemas. `pnpm test:e2e` starts the API from `../kairo-api` on port 4100 against `kairo_test` and a production build
+of the web app on port 3100, built into `.next-e2e` so it never touches a running `pnpm dev`. Before each test it
+empties `kairo_test` with `pg`, refusing any database whose name does not end in `_test`, as the API's tests do
+(decision 013).
+
+**Consequences.** The web end-to-end tests need the API repository cloned next to this one and the database up.
+WebKit (Safari) can be added later as another Playwright project.
