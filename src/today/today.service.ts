@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
+import { Contact } from '../contacts/contact.entity.js';
 import { OPEN_STATUSES } from '../jobs/job.enums.js';
 import { Job } from '../jobs/job.entity.js';
 import { Task } from '../tasks/task.entity.js';
@@ -11,12 +12,16 @@ import { Task } from '../tasks/task.entity.js';
  */
 const RECENTLY_DONE = '48 hours';
 
-/** What Today shows (docs/design/v0.3-today.md). Both queries filter by the user, like every other one. */
+/**
+ * What Today shows (docs/design/v0.3-today.md, v0.4-contacts.md). Every query filters by the user, like every other
+ * one.
+ */
 @Injectable()
 export class TodayService {
   constructor(
     @InjectRepository(Task) private readonly tasks: Repository<Task>,
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
+    @InjectRepository(Contact) private readonly contacts: Repository<Contact>,
   ) {}
 
   /** Open tasks by due day (those without one last), then the recently done ones. */
@@ -41,6 +46,17 @@ export class TodayService {
       .andWhere('job.status IN (:...open)', { open: OPEN_STATUSES })
       .orderBy('job.nextFollowUpOn', 'ASC')
       .addOrderBy('job.company', 'ASC')
+      .getMany();
+  }
+
+  /** The contacts with a next follow-up, soonest first (decision 037). */
+  contactFollowUpsFor(userId: string): Promise<Contact[]> {
+    return this.contacts
+      .createQueryBuilder('contact')
+      .where('contact.userId = :userId', { userId })
+      .andWhere('contact.nextFollowUpOn IS NOT NULL')
+      .orderBy('contact.nextFollowUpOn', 'ASC')
+      .addOrderBy('LOWER(contact.name)', 'ASC')
       .getMany();
   }
 }
