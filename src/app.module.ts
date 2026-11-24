@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { TasksModule } from './tasks/tasks.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module.js';
     AuthModule,
     UsersModule,
     JobsModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [

@@ -5,7 +5,7 @@ import type { JobStageChange } from './job-stage-change.entity.js';
 import type { Job } from './job.entity.js';
 
 /** Optional free text: trimmed, and an empty string clears it (forms send "" for an empty field). */
-function text(max: number) {
+export function text(max: number) {
   return z
     .string()
     .trim()
