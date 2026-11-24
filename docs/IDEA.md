@@ -85,8 +85,6 @@ The roadmap is a living document. New modules are welcome when they pass the sco
 New ideas land here first, so they never interrupt the version in progress. When a version ships, the backlog
 is reviewed and each idea is either scheduled into the roadmap or dropped.
 
-- **Sign in with Google (OAuth 2.0 / OpenID Connect).** An alternative to email and password; it works on
-  localhost. Proposed after v0.1.
 - **Tell users when the admin resets their password.** A notice at sign-in ("your password was reset by the admin on
   …"), so a takeover by the admin is noticed (decision 026). Before any public deployment.
 - **Jobs board.** A kanban view of the jobs by stage, with drag and drop, on top of the v0.2 API (decision 030).
