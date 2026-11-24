@@ -792,3 +792,68 @@ date (`lib/today.ts`). Done tasks come from the last 48 hours, enough for any ti
 
 **Consequences.** Today is always the user's real day, travel included, with nothing to configure. The answer grows
 with the open items, which stay few for one person.
+
+---
+
+## 036. Contacts relate to many jobs
+
+- **Date:** 2026-11-24
+- **Status:** Accepted
+
+**Context.** v0.4 adds the people the user talks to during a search. A recruiter at an agency may bring several
+postings; a friend who refers the user may know about more than one role at their company.
+
+**Options.** A contact with one optional job, like a task (decision 033); or contacts linked to any number of jobs,
+and jobs to any number of contacts.
+
+**Decision.** Many to many, through a `job_contacts` table. Deleting a contact or a job removes only their links.
+A contact can also have no job at all.
+
+**Consequences.** Each person is saved once, whatever the number of postings. Linking needs its own endpoints, and the
+service checks that both the contact and the job are the user's. Metrics (v0.9) can compare jobs with and without a
+contact.
+
+---
+
+## 037. A contact's reminder is a next day and a note
+
+- **Date:** 2026-11-24
+- **Status:** Accepted
+
+**Options.** A next follow-up day and note, as on a job; or a cadence ("every 30 days") from the last conversation.
+
+**Decision.** A next day and an optional note (`next_follow_up_on`, `next_follow_up_note`). Today shows it with
+**Done** and **Postpone**, as a job's follow-up (decision 034).
+
+**Consequences.** One way to follow up across Kairo, and specific days ("after her trip") fit. Nothing reschedules
+itself: after writing to someone, the user sets the next day if there is one.
+
+---
+
+## 038. A log of conversations with each contact
+
+- **Date:** 2026-11-24
+- **Status:** Accepted
+
+**Options.** Free notes on the contact; or one entry per conversation, with its day, channel and a short note.
+
+**Decision.** A `contact_interactions` table: the day, the channel (`email`, `linkedin`, `call`, `meeting`, `other`)
+and an optional note. Entered by hand: no LinkedIn automation of any kind.
+
+**Consequences.** "When did I last talk to her, and about what?" has an answer, and Metrics (v0.9) can count
+conversations. It is one more table and form.
+
+---
+
+## 039. A contact's company is free text
+
+- **Date:** 2026-11-24
+- **Status:** Accepted
+
+**Options.** Free text, as `jobs.company`; or a `companies` table shared by jobs and contacts.
+
+**Decision.** Free text. A shared companies table is reconsidered with the Radar (v0.8), which tracks target
+companies.
+
+**Consequences.** No change to jobs in this version. The same company can be written two ways; linking a contact to
+its jobs is what ties them together.
