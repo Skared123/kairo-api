@@ -1,12 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, type Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
+import { isForeignKeyViolation, jobNotFound } from '../jobs/job-not-found.js';
 import { Job } from '../jobs/job.entity.js';
 import { Task } from './task.entity.js';
 import type { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './tasks.schemas.js';
-
-/** PostgreSQL's foreign_key_violation. */
-const FOREIGN_KEY_VIOLATION = '23503';
 
 /**
  * The current user's tasks (decision 033). Every method takes the user's id and filters by it, and a task's job must
@@ -84,15 +82,7 @@ export class TasksService {
     try {
       return await this.tasks.save(task);
     } catch (error) {
-      const code = error instanceof QueryFailedError ? (error.driverError as { code?: string }).code : undefined;
-      if (code === FOREIGN_KEY_VIOLATION) {
-        throw jobNotFound();
-      }
-      throw error;
+      throw isForeignKeyViolation(error) ? jobNotFound() : error;
     }
   }
-}
-
-function jobNotFound(): BadRequestException {
-  return new BadRequestException({ statusCode: 400, error: 'job_not_found', message: 'Job not found' });
 }

@@ -1,6 +1,7 @@
 import type { DataSourceOptions } from 'typeorm';
 import { Session } from '../auth/session.entity.js';
 import { Contact } from '../contacts/contact.entity.js';
+import { JobContact } from '../contacts/job-contact.entity.js';
 import { JobCriteria } from '../jobs/job-criteria.entity.js';
 import { JobStageChange } from '../jobs/job-stage-change.entity.js';
 import { Job } from '../jobs/job.entity.js';
@@ -19,4 +20,5 @@ export const entities: NonNullable<DataSourceOptions['entities']> = [
   JobCriteria,
   Task,
   Contact,
+  JobContact,
 ];

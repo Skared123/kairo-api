@@ -11,9 +11,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -54,6 +56,7 @@ export class ContactsController {
 
   @Post()
   @ApiCreatedResponse({ standardSchema: contactSchema })
+  @ApiBadRequestResponse({ description: "Invalid fields, or a job that is not one of the user's (job_not_found)" })
   async create(
     @CurrentUser('id') userId: string,
     @Body({ schema: createContactSchema }) body: CreateContactDto,
@@ -89,5 +92,30 @@ export class ContactsController {
   @ApiNotFoundResponse({ description: 'Contact not found' })
   async remove(@CurrentUser('id') userId: string, @Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     await this.contacts.remove(userId, id);
+  }
+
+  /** Links the contact to one of the user's jobs; linking twice changes nothing (decision 036). */
+  @Put(':id/jobs/:jobId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ description: 'Contact or job not found' })
+  async link(
+    @CurrentUser('id') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('jobId', new ParseUUIDPipe()) jobId: string,
+  ): Promise<void> {
+    await this.contacts.link(userId, id, jobId);
+  }
+
+  @Delete(':id/jobs/:jobId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ description: 'Contact or job not found' })
+  async unlink(
+    @CurrentUser('id') userId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('jobId', new ParseUUIDPipe()) jobId: string,
+  ): Promise<void> {
+    await this.contacts.unlink(userId, id, jobId);
   }
 }

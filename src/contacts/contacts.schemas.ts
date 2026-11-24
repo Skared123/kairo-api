@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { JOB_STATUSES } from '../jobs/job.enums.js';
 import { text } from '../jobs/jobs.schemas.js';
 import { CONTACT_KINDS } from './contact.enums.js';
 import type { Contact } from './contact.entity.js';
@@ -19,7 +20,11 @@ const contactFields = {
   nextFollowUpNote: text(500),
 };
 
-export const createContactSchema = z.strictObject(contactFields);
+export const createContactSchema = z.strictObject({
+  ...contactFields,
+  /** Links the new contact to these jobs, all the user's own (decision 036). */
+  jobIds: z.array(z.uuid()).max(50).optional(),
+});
 export type CreateContactDto = z.infer<typeof createContactSchema>;
 
 export const updateContactSchema = z
@@ -31,6 +36,8 @@ export type UpdateContactDto = z.infer<typeof updateContactSchema>;
 export const listContactsQuerySchema = z.strictObject({
   /** Matches name or company, ignoring case. */
   q: z.string().trim().max(200).optional(),
+  /** Only this job's contacts. */
+  jobId: z.uuid().optional(),
 });
 export type ListContactsQuery = z.infer<typeof listContactsQuerySchema>;
 
@@ -46,12 +53,14 @@ export const contactSchema = z.object({
   notes: z.string().nullable(),
   nextFollowUpOn: z.iso.date().nullable(),
   nextFollowUpNote: z.string().nullable(),
+  /** The jobs it is linked to, oldest link first, with what a list needs to show and link them. */
+  jobs: z.array(z.object({ id: z.uuid(), company: z.string(), title: z.string(), status: z.enum(JOB_STATUSES) })),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
 export type ContactResponse = z.infer<typeof contactSchema>;
 
-/** The response never carries the owner: every contact a user sees is theirs. */
+/** The response never carries the owner: every contact a user sees is theirs. `contact.jobLinks` must be loaded. */
 export function toContactResponse(contact: Contact): ContactResponse {
   return {
     id: contact.id,
@@ -65,6 +74,9 @@ export function toContactResponse(contact: Contact): ContactResponse {
     notes: contact.notes,
     nextFollowUpOn: contact.nextFollowUpOn,
     nextFollowUpNote: contact.nextFollowUpNote,
+    jobs: (contact.jobLinks ?? []).flatMap(({ job }) =>
+      job ? [{ id: job.id, company: job.company, title: job.title, status: job.status }] : [],
+    ),
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   };

@@ -5,11 +5,14 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  type Relation,
 } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import { CONTACT_KINDS, type ContactKind } from './contact.enums.js';
+import { JobContact } from './job-contact.entity.js';
 
 /**
  * Someone the user talks to during the search: a recruiter, a hiring manager, a friend who refers them. Every row
@@ -65,6 +68,10 @@ export class Contact {
   /** What to write about. */
   @Column({ type: 'text', nullable: true })
   nextFollowUpNote: string | null;
+
+  /** The jobs it is linked to (decision 036). Loaded only when asked for. */
+  @OneToMany(() => JobContact, (link) => link.contact)
+  jobLinks?: Relation<JobContact[]>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
