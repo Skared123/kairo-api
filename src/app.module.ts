@@ -11,6 +11,7 @@ import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
+import { TodayModule } from './today/today.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -44,6 +45,7 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     JobsModule,
     TasksModule,
+    TodayModule,
   ],
   controllers: [AppController],
   providers: [

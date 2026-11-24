@@ -11,6 +11,9 @@ export const JOB_STATUSES = [
 ] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+/** The stages with something left to do. Today leaves out the rest: accepted, rejected and discarded (decision 034). */
+export const OPEN_STATUSES = ['to_review', 'to_apply', 'applied', 'interviewing', 'offer'] as const satisfies JobStatus[];
+
 export const JOB_SOURCES = ['linkedin', 'referral', 'company_site', 'job_board', 'recruiter', 'other'] as const;
 export type JobSource = (typeof JOB_SOURCES)[number];
 
