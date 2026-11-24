@@ -90,12 +90,14 @@ describe('Jobs (e2e)', () => {
 
   describe('list', () => {
     it('lists the newest change first, filtered by stage and searched by company or title', async () => {
+      // Has "100" but not "100%": a search that took % as a wildcard would find it too.
+      await createJob(ada, { company: 'Hooli', title: 'Top 100 Engineer' });
       const first = await createJob(ada, { company: 'Acme', title: 'Backend Engineer' });
       const second = await createJob(ada, { company: 'Globex', title: 'Fullstack Developer', status: 'applied' });
       await createJob(ada, { company: 'Initech', title: 'Frontend 100% Remote' });
 
       const all = await http.get('/jobs').set('Cookie', ada.cookie).expect(200);
-      expect(all.body.map((job: { company: string }) => job.company)).toEqual(['Initech', 'Globex', 'Acme']);
+      expect(all.body.map((job: { company: string }) => job.company)).toEqual(['Initech', 'Globex', 'Acme', 'Hooli']);
 
       const applied = await http.get('/jobs?status=applied').set('Cookie', ada.cookie).expect(200);
       expect(applied.body.map((job: { id: string }) => job.id)).toEqual([second.id]);

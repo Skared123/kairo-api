@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
+import { ContactsModule } from './contacts/contacts.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
 import { JobsModule } from './jobs/jobs.module.js';
@@ -46,6 +47,7 @@ import { UsersModule } from './users/users.module.js';
     JobsModule,
     TasksModule,
     TodayModule,
+    ContactsModule,
   ],
   controllers: [AppController],
   providers: [

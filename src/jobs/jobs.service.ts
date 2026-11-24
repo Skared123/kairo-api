@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, type Repository } from 'typeorm';
+import { containsPattern } from '../database/contains-pattern.js';
 import { JobStageChange } from './job-stage-change.entity.js';
 import type { JobStatus } from './job.enums.js';
 import { Job } from './job.entity.js';
@@ -105,9 +106,7 @@ export class JobsService {
       query.andWhere('job.status = :status', { status });
     }
     if (q) {
-      // The search text is matched literally: % and _ lose their LIKE meaning.
-      const pattern = `%${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-      query.andWhere('(job.company ILIKE :pattern OR job.title ILIKE :pattern)', { pattern });
+      query.andWhere('(job.company ILIKE :pattern OR job.title ILIKE :pattern)', { pattern: containsPattern(q) });
     }
     return query.getMany();
   }
