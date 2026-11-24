@@ -703,3 +703,23 @@ title similar enough according to PostgreSQL's `pg_trgm` similarity. It warns, n
 of v0.2: a migration enables the extension and the code leaves a `TODO(Raymundo)` where the query goes.
 
 **Consequences.** The check only ever looks at the current user's jobs. Tests prove it, as for every module.
+
+---
+
+## 032. License when the repositories go public: all rights reserved
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** Both repositories go public with v0.2 (decision 002), so their license has to be stated.
+
+**Options.** All rights reserved, so the code can be read but not reused; or MIT, so anyone can use, copy and modify
+it, commercially too, keeping the copyright notice.
+
+**Decision.** All rights reserved, stated in each README. There is no `LICENSE` file.
+
+**Consequences.** The projects work as a portfolio without granting reuse. A more permissive license can be adopted
+later; a permission granted under MIT could not be taken back.
+
+**Also decided.** The history goes public as it is, with the commit author's email, and the demo seed is set aside
+to the ideas backlog.

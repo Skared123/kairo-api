@@ -17,7 +17,7 @@ companies I care about show up and get filled before I notice them.
 
 Me first: Kairo is the tool I use every day for my own job search, and it is also a portfolio project.
 It supports several accounts, so I can lend it to a friend and see if it helps them too.
-Anyone looking at the project sees it with demo data; real data never leaves the machine it runs on.
+Real data never leaves the machine it runs on.
 
 ## Core idea
 
@@ -54,7 +54,7 @@ Personal life (exercise, habits, errands) stays in other tools.
   and no query returns another user's data.
 - **The core works without AI.** AI adds value on top of a tracker that already works.
 - **Model output is untrusted input.** It is validated before anything is saved.
-- **Personal data stays out of the repo.** The repo ships a demo seed with fictional companies and postings.
+- **Personal data stays out of the repo.** It lives only in the database of the machine Kairo runs on.
 - **Installable.** It can be added to the macOS Dock (Safari "Add to Dock") and used like a desktop app.
 
 ## Non-goals
@@ -90,3 +90,5 @@ is reviewed and each idea is either scheduled into the roadmap or dropped.
 - **Tell users when the admin resets their password.** A notice at sign-in ("your password was reset by the admin on
   …"), so a takeover by the admin is noticed (decision 026). Before any public deployment.
 - **Jobs board.** A kanban view of the jobs by stage, with drag and drop, on top of the v0.2 API (decision 030).
+- **Demo seed.** Fictional companies and postings, so anyone can try Kairo without typing data first. Set aside in
+  v0.2.

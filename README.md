@@ -3,7 +3,8 @@
 Kairo is a job search companion: track applications, get prepared, and act on the right opportunity in time.
 This repository is the API. The web app lives in `kairo-web`.
 
-> **Status:** v0.1 Accounts. Sign-in, roles and account management are done on the API side; the web app is next.
+> **Status:** v0.2 Jobs. Accounts, plus every job posting tracked through its stages, with its history, the next
+> follow-up and a comparison with the user's criteria. Duplicate detection is in progress.
 > The product idea, modules and roadmap are in [`docs/IDEA.md`](docs/IDEA.md).
 
 ## Stack
@@ -113,4 +114,5 @@ docs/          product idea, decisions and designs
 
 ## License
 
-Private for now; not licensed for reuse.
+Copyright (c) 2026 Raymundo Sanchez. All rights reserved. The code is public to read, but it is not licensed
+for reuse, copying or distribution.

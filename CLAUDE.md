@@ -64,7 +64,7 @@ Local layout: a plain parent folder (not a git repo) groups both clones.
 - Personal data (CV, target companies, salary goal, current employer, anything about Raymundo's situation) never
   goes into the repo, commits, issues or public text. It lives in git-ignored local files and in the database.
 - Public-facing text (README, docs, UI copy) stays neutral about personal circumstances.
-- The repo ships demo data with fictional companies and postings.
+- Test data uses fictional people, companies and postings, as in `test/` and `e2e/`.
 
 ## Hard rules
 
