@@ -6,6 +6,11 @@ import type { JobStatus } from './job.enums.js';
 import { Job } from './job.entity.js';
 import type { CreateJobDto, ListJobsQuery, UpdateJobDto } from './jobs.schemas.js';
 
+/** How similar a company and a title must both be to flag a possible duplicate, from 0 to 1 (decision 031). */
+const SIMILAR_ENOUGH = 0.6;
+/** The most possible duplicates POST /jobs lists. */
+const MAX_DUPLICATES = 5;
+
 /**
  * The current user's jobs. Every method takes the user's id and filters by it, so an id from the URL can never reach
  * another user's row; a job that is not theirs is "not found" (docs/design/v0.2-jobs.md).
@@ -53,27 +58,34 @@ export class JobsService {
    * The user's other jobs that may be the same posting as `job`, which was just saved (decision 031). Warns, never
    * blocks: POST /jobs answers them as `possibleDuplicates`.
    *
-   * TODO(Raymundo): implement it. Until then it finds nothing.
+   * A job is a possible duplicate when it has the same URL, or when both its company and its title are similar to
+   * `job`'s according to pg_trgm (https://www.postgresql.org/docs/current/pgtrgm.html), which compares the
+   * three-letter pieces of each text, ignoring case and punctuation:
+   * - The company uses `word_similarity` in both directions, so "Acme" matches "Acme Robotics Inc.".
+   * - The title uses `similarity`, which weighs the whole text: "Senior Full-Stack Engineer" matches
+   *   "Senior Fullstack Engineer" (0.86), "Senior Backend Engineer" does not (0.52).
+   * Both must reach SIMILAR_ENOUGH, so another role at the same company is not flagged. Same URL first, then the most
+   * similar, at most MAX_DUPLICATES.
    *
-   * What it must do:
-   * - Look only at this user's jobs (`userId`), never anyone else's. The isolation test must prove it.
-   * - Leave out `job` itself.
-   * - Count as a possible duplicate a job with the same URL, or with a company and a title similar enough to `job`'s.
-   * - Return the closest matches first, and only a few of them.
-   *
-   * Where to look:
-   * - pg_trgm is enabled (migration EnablePgTrgm). Read its docs: https://www.postgresql.org/docs/current/pgtrgm.html,
-   *   especially `similarity()`, the `%` operator and `pg_trgm.similarity_threshold`.
-   * - Decide the threshold with examples, in `psql` (`pnpm db:up`, then `docker exec -it kairo-db psql -U kairo`).
-   * - The query builder in `list()` above shows how this service filters by user and passes parameters safely.
-   * - With many jobs, think about whether an index would help (pg_trgm offers GIN and GiST ones) and how you would
-   *   check it (`EXPLAIN ANALYZE`). If you add one, it goes in a migration.
-   * - The tests go in test/job-duplicates.e2e-spec.ts, which lists the cases to cover.
+   * No trigram index: the user's own jobs (a few hundred at most, found through jobs_user_id_idx) are the only rows
+   * compared, and a GIN index would not serve these expressions anyway.
    */
   async findPossibleDuplicates(userId: string, job: Job): Promise<Job[]> {
-    void userId;
-    void job;
-    return [];
+    const sameUrl = 'job.url = :url';
+    const company = 'GREATEST(word_similarity(:company, job.company), word_similarity(job.company, :company))';
+    const title = 'similarity(:title, job.title)';
+    return this.jobs
+      .createQueryBuilder('job')
+      .where('job.userId = :userId', { userId })
+      .andWhere('job.id <> :id', { id: job.id })
+      // A null URL never matches: in SQL, `NULL = NULL` is not true.
+      .andWhere(`(${sameUrl} OR (${company} >= :threshold AND ${title} >= :threshold))`)
+      .orderBy(sameUrl, 'DESC', 'NULLS LAST')
+      .addOrderBy(`${company} + ${title}`, 'DESC')
+      .addOrderBy('job.updatedAt', 'DESC')
+      .setParameters({ url: job.url, company: job.company, title: job.title, threshold: SIMILAR_ENOUGH })
+      .limit(MAX_DUPLICATES)
+      .getMany();
   }
 
   /** The job's moves, oldest first. Checks ownership first, like every other method. */

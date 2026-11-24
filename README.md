@@ -4,7 +4,7 @@ Kairo is a job search companion: track applications, get prepared, and act on th
 This repository is the API. The web app lives in `kairo-web`.
 
 > **Status:** v0.2 Jobs. Accounts, plus every job posting tracked through its stages, with its history, the next
-> follow-up and a comparison with the user's criteria. Duplicate detection is in progress.
+> follow-up, a comparison with the user's criteria and a warning about possible duplicates.
 > The product idea, modules and roadmap are in [`docs/IDEA.md`](docs/IDEA.md).
 
 ## Stack

@@ -690,19 +690,31 @@ the ideas backlog.
 
 ---
 
-## 031. Duplicate detection with pg_trgm, implemented by Raymundo
+## 031. Duplicate detection with pg_trgm
 
 - **Date:** 2026-11-23
 - **Status:** Accepted
 
-**Context.** The same posting is easy to save twice, from LinkedIn and from the company's site. This is a task the
-author implements himself (`TODO(Raymundo)`), with hints and a code review.
+**Context.** The same posting is easy to save twice, from LinkedIn and from the company's site. It was first left to
+the author as a `TODO(Raymundo)`; later the author chose to have it implemented and explained instead.
 
-**Decision.** When a job is created, the API warns about the user's jobs with the same URL, or with a company and a
-title similar enough according to PostgreSQL's `pg_trgm` similarity. It warns, never blocks. It is the last API step
-of v0.2: a migration enables the extension and the code leaves a `TODO(Raymundo)` where the query goes.
+**Decision.** When a job is created, the API warns about the user's jobs with the same URL, or with both a company and
+a title similar enough according to PostgreSQL's `pg_trgm`. It warns, never blocks.
 
-**Consequences.** The check only ever looks at the current user's jobs. Tests prove it, as for every module.
+- **Company:** `word_similarity` in both directions, so a shorter name matches a longer one ("Acme" and "Acme
+  Robotics Inc.").
+- **Title:** `similarity`, which weighs the whole text, so "Senior Full-Stack Engineer" matches "Senior Fullstack
+  Engineer" (0.86) but "Senior Backend Engineer" does not (0.52).
+- **Threshold:** 0.6 for both, chosen from examples like these. Requiring both keeps another role at the same company,
+  or the same role elsewhere, from being flagged. A wrong warning costs little; a missed one means a posting saved
+  twice.
+- **Order:** same URL first, then the most similar; at most five.
+- **No trigram index:** only the user's own jobs are compared (found through `jobs_user_id_idx`), and a GIN index
+  only serves pg_trgm's operators (`%`, `<%`), not these function calls.
+
+**Consequences.** The check only ever looks at the current user's jobs. Tests prove it, as for every module, and each
+rule (user, the job itself, URL, threshold, order) has a test that fails without it. URLs are compared exactly:
+stripping query strings would break job boards that put the posting's id there.
 
 ---
 
