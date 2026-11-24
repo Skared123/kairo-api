@@ -735,3 +735,60 @@ later; a permission granted under MIT could not be taken back.
 
 **Also decided.** The history goes public as it is, with the commit author's email, and the demo seed is set aside
 to the ideas backlog.
+
+---
+
+## 033. Tasks: optionally linked to a job, kept when done
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** v0.3 adds manual tasks ("prepare the Acme interview", "write a LinkedIn post"). Many belong to a posting,
+some do not.
+
+**Options.**
+- **Link:** standalone tasks only; or tasks with an optional job.
+- **When the job is deleted:** delete its tasks with it (and say so in the confirmation); or keep them without the job.
+- **When a task is done:** delete it; or keep it with the moment it was done.
+
+**Decision.** A task has a title, optional notes, an optional due day and an optional job. Deleting the job keeps its
+tasks, unlinked (`ON DELETE SET NULL`). A done task is kept, with `done_at`, and can be opened again.
+
+**Consequences.** A task is never lost without the user noticing, a mistaken "done" can be undone, and Metrics (v0.9)
+can count finished work. The service has to check that a task's job is the same user's.
+
+---
+
+## 034. The Today screen: four sections and actions on follow-ups
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Options.** Only what is overdue or due today; or also the next seven days and the tasks without a day. For
+follow-ups, only a link to the job; or acting on them from Today.
+
+**Decision.** Today replaces the home page with **Overdue**, **Today**, **Next 7 days** and **No date**, and **Done
+today** collapsed at the end. Follow-ups get **Done** (clears the follow-up) and **Postpone** (a new day) besides the
+link to the job. Jobs in a closed stage (`accepted`, `rejected`, `discarded`) are left out.
+
+**Consequences.** One screen for the day's work, without surprises from what is coming. The follow-up actions reuse
+`PATCH /jobs/:id`, so there is no new endpoint for them.
+
+---
+
+## 035. "Today" is the browser's day
+
+- **Date:** 2026-11-23
+- **Status:** Accepted
+
+**Context.** Which section an item goes in depends on the user's calendar day, which depends on their time zone.
+Cache Components refuses the current time on the server, and the server's time zone need not be the user's.
+
+**Options.** The browser groups the items with its own date; or the user's time zone is stored in their account and
+the API filters by day, which needs a settings screen.
+
+**Decision.** `GET /today` answers every open item, not filtered by day, and the browser groups them with its own
+date (`lib/today.ts`). Done tasks come from the last 48 hours, enough for any time zone's "done today".
+
+**Consequences.** Today is always the user's real day, travel included, with nothing to configure. The answer grows
+with the open items, which stay few for one person.
