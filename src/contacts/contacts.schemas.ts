@@ -53,6 +53,8 @@ export const contactSchema = z.object({
   notes: z.string().nullable(),
   nextFollowUpOn: z.iso.date().nullable(),
   nextFollowUpNote: z.string().nullable(),
+  /** The day of the latest conversation (decision 038). */
+  lastInteractionOn: z.iso.date().nullable(),
   /** The jobs it is linked to, oldest link first, with what a list needs to show and link them. */
   jobs: z.array(z.object({ id: z.uuid(), company: z.string(), title: z.string(), status: z.enum(JOB_STATUSES) })),
   createdAt: z.iso.datetime(),
@@ -74,6 +76,7 @@ export function toContactResponse(contact: Contact): ContactResponse {
     notes: contact.notes,
     nextFollowUpOn: contact.nextFollowUpOn,
     nextFollowUpNote: contact.nextFollowUpNote,
+    lastInteractionOn: contact.lastInteractionOn ?? null,
     jobs: (contact.jobLinks ?? []).flatMap(({ job }) =>
       job ? [{ id: job.id, company: job.company, title: job.title, status: job.status }] : [],
     ),

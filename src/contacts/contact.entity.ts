@@ -8,6 +8,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  VirtualColumn,
   type Relation,
 } from 'typeorm';
 import { User } from '../users/user.entity.js';
@@ -68,6 +69,13 @@ export class Contact {
   /** What to write about. */
   @Column({ type: 'text', nullable: true })
   nextFollowUpNote: string | null;
+
+  /** The day of the latest conversation (decision 038), read with the contact; null before the first one. */
+  @VirtualColumn({
+    type: 'date',
+    query: (alias) => `SELECT MAX(occurred_on) FROM contact_interactions WHERE contact_id = ${alias}.id`,
+  })
+  lastInteractionOn: string | null;
 
   /** The jobs it is linked to (decision 036). Loaded only when asked for. */
   @OneToMany(() => JobContact, (link) => link.contact)
