@@ -14,16 +14,33 @@ const itemFields = {
   notes: text(5_000),
   /** The skills it trains, by name; new ones are created. On an update, the whole set. */
   skills: z.array(skillName).max(20).optional(),
+  /** Decision 041. Done sets finishedAt; done and dropped clear the focus. */
+  status: z.enum(LEARNING_STATUSES).optional(),
+  /** true makes it the focus, moving it from any other item; false clears it (decision 042). */
+  isFocus: z.boolean().optional(),
 };
 
-export const createLearningItemSchema = z.strictObject(itemFields);
+/** A finished or dropped item cannot be the focus: what it would show in Today is not to be worked on. */
+const focusNeedsOpenItem = <T extends { status?: string; isFocus?: boolean }>(item: T) =>
+  !(item.isFocus === true && (item.status === 'done' || item.status === 'dropped'));
+const FOCUS_NEEDS_OPEN_ITEM = { message: 'a done or dropped item cannot be the focus', path: ['isFocus'] };
+
+export const createLearningItemSchema = z.strictObject(itemFields).refine(focusNeedsOpenItem, FOCUS_NEEDS_OPEN_ITEM);
 export type CreateLearningItemDto = z.infer<typeof createLearningItemSchema>;
 
 export const updateLearningItemSchema = z
   .strictObject(itemFields)
   .partial()
-  .refine((changes) => Object.keys(changes).length > 0, { message: 'send at least one field' });
+  .refine((changes) => Object.keys(changes).length > 0, { message: 'send at least one field' })
+  .refine(focusNeedsOpenItem, FOCUS_NEEDS_OPEN_ITEM);
 export type UpdateLearningItemDto = z.infer<typeof updateLearningItemSchema>;
+
+export const listLearningQuerySchema = z.strictObject({
+  status: z.enum(LEARNING_STATUSES).optional(),
+  /** Only the items that train this skill. */
+  skillId: z.uuid().optional(),
+});
+export type ListLearningQuery = z.infer<typeof listLearningQuerySchema>;
 
 export const learningItemSchema = z.object({
   id: z.uuid(),

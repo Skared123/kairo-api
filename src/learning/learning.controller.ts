@@ -1,6 +1,18 @@
 import { CurrentUser } from '@nestjs/authentication';
 import { Can } from '@nestjs/authorization';
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -11,10 +23,12 @@ import {
 import {
   createLearningItemSchema,
   learningItemSchema,
+  listLearningQuerySchema,
   toLearningItemResponse,
   updateLearningItemSchema,
   type CreateLearningItemDto,
   type LearningItemResponse,
+  type ListLearningQuery,
   type UpdateLearningItemDto,
 } from './learning.schemas.js';
 import { LearningService } from './learning.service.js';
@@ -31,8 +45,11 @@ export class LearningController {
 
   @Get()
   @ApiOkResponse({ standardSchema: learningItemSchema, isArray: true })
-  async list(@CurrentUser('id') userId: string): Promise<LearningItemResponse[]> {
-    return (await this.learning.list(userId)).map(toLearningItemResponse);
+  async list(
+    @CurrentUser('id') userId: string,
+    @Query({ schema: listLearningQuerySchema }) query: ListLearningQuery,
+  ): Promise<LearningItemResponse[]> {
+    return (await this.learning.list(userId, query)).map(toLearningItemResponse);
   }
 
   @Post()
@@ -54,7 +71,10 @@ export class LearningController {
     return toLearningItemResponse(await this.learning.findOne(userId, id));
   }
 
-  /** Changes any field; `skills` replaces the whole set. */
+  /**
+   * Changes any field; `skills` replaces the whole set. `status: done` records when; `isFocus: true` moves the focus
+   * here (decisions 041 and 042).
+   */
   @Patch(':id')
   @ApiOkResponse({ standardSchema: learningItemSchema })
   @ApiNotFoundResponse({ description: 'Learning item not found' })

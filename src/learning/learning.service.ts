@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, type EntityManager, type Repository } from 'typeorm';
+import { DataSource, In, Not, type EntityManager, type Repository } from 'typeorm';
 import { LearningItemSkill } from './learning-item-skill.entity.js';
 import { LearningItem } from './learning-item.entity.js';
-import type { CreateLearningItemDto, UpdateLearningItemDto } from './learning.schemas.js';
+import type { LearningStatus } from './learning.enums.js';
+import type { CreateLearningItemDto, ListLearningQuery, UpdateLearningItemDto } from './learning.schemas.js';
 import { cleanSkillName, Skill, skillKey } from './skill.entity.js';
+
+/** The statuses that end an item: they clear its focus (decision 042). */
+const FINISHED: LearningStatus[] = ['done', 'dropped'];
 
 /**
  * The current user's learning items (docs/design/v0.5-learning.md). Every method takes the user's id and filters by
@@ -18,14 +22,37 @@ export class LearningService {
     private readonly dataSource: DataSource,
   ) {}
 
-  /** Latest change first, each with its skills. */
-  list(userId: string): Promise<LearningItem[]> {
-    return this.withSkills(userId).orderBy('item.updatedAt', 'DESC').getMany();
+  /** The focus first, then in progress, to start, done and dropped; latest change first within each. */
+  list(userId: string, { status, skillId }: ListLearningQuery): Promise<LearningItem[]> {
+    const query = this.withSkills(userId)
+      .orderBy('item.isFocus', 'DESC')
+      .addOrderBy(
+        "CASE item.status WHEN 'in_progress' THEN 0 WHEN 'to_start' THEN 1 WHEN 'done' THEN 2 ELSE 3 END",
+        'ASC',
+      )
+      .addOrderBy('item.updatedAt', 'DESC');
+    if (status) {
+      query.andWhere('item.status = :status', { status });
+    }
+    if (skillId) {
+      // A subquery, not the join: the items found still show all their skills.
+      query.andWhere(
+        'EXISTS (SELECT 1 FROM learning_item_skills lis WHERE lis.item_id = item.id AND lis.skill_id = :skillId)',
+        { skillId },
+      );
+    }
+    return query.getMany();
   }
 
-  async create(userId: string, { skills = [], ...fields }: CreateLearningItemDto): Promise<LearningItem> {
+  async create(
+    userId: string,
+    { skills = [], status, isFocus, ...fields }: CreateLearningItemDto,
+  ): Promise<LearningItem> {
     const { id } = await this.dataSource.transaction(async (manager) => {
-      const item = await manager.save(this.items.create({ ...fields, userId }));
+      const item = this.items.create({ ...fields, userId });
+      applyStatus(item, status);
+      await this.applyFocus(manager, item, isFocus);
+      await manager.save(item);
       await this.setSkills(manager, userId, item.id, skills);
       return item;
     });
@@ -40,13 +67,19 @@ export class LearningService {
     return item;
   }
 
-  async update(userId: string, id: string, { skills, ...changes }: UpdateLearningItemDto): Promise<LearningItem> {
+  async update(
+    userId: string,
+    id: string,
+    { skills, status, isFocus, ...changes }: UpdateLearningItemDto,
+  ): Promise<LearningItem> {
     await this.dataSource.transaction(async (manager) => {
       const item = await manager.findOneBy(LearningItem, { id, userId });
       if (!item) {
         throw new NotFoundException('Learning item not found');
       }
       Object.assign(item, changes);
+      applyStatus(item, status);
+      await this.applyFocus(manager, item, isFocus);
       await manager.save(item);
       if (skills) {
         await this.setSkills(manager, userId, id, skills);
@@ -60,6 +93,33 @@ export class LearningService {
     if (!affected) {
       throw new NotFoundException('Learning item not found');
     }
+  }
+
+  /**
+   * Makes the item the user's focus, or takes it away (decision 042). Moving the focus clears the previous one in the
+   * same transaction, after locking the user's row: two moves at once run one after the other instead of tripping on
+   * the one-focus index. A finished item never keeps the focus.
+   */
+  private async applyFocus(manager: EntityManager, item: LearningItem, isFocus: boolean | undefined): Promise<void> {
+    if (FINISHED.includes(item.status)) {
+      if (isFocus) {
+        throw new BadRequestException('A done or dropped item cannot be the focus');
+      }
+      item.isFocus = false;
+      return;
+    }
+    if (isFocus === undefined) {
+      return;
+    }
+    if (isFocus) {
+      await manager.query('SELECT 1 FROM users WHERE id = $1 FOR UPDATE', [item.userId]);
+      await manager.update(
+        LearningItem,
+        { userId: item.userId, isFocus: true, ...(item.id ? { id: Not(item.id) } : {}) },
+        { isFocus: false },
+      );
+    }
+    item.isFocus = isFocus;
   }
 
   /**
@@ -105,4 +165,17 @@ export class LearningService {
       .leftJoinAndSelect('link.skill', 'skill', 'skill.userId = item.userId')
       .where('item.userId = :userId', { userId });
   }
+}
+
+/** Moving to done records when; leaving it forgets (decision 041). Done again keeps the first moment. */
+function applyStatus(item: LearningItem, status: LearningStatus | undefined): void {
+  if (status === undefined) {
+    return;
+  }
+  if (status === 'done') {
+    item.finishedAt = item.status === 'done' && item.finishedAt ? item.finishedAt : new Date();
+  } else {
+    item.finishedAt = null;
+  }
+  item.status = status;
 }
