@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-import { isForeignKeyViolation, jobNotFound } from '../jobs/job-not-found.js';
+import { isForeignKeyViolation } from '../database/postgres-errors.js';
+import { jobNotFound } from '../jobs/job-not-found.js';
 import { Job } from '../jobs/job.entity.js';
 import { Task } from './task.entity.js';
 import type { CreateTaskDto, ListTasksQuery, UpdateTaskDto } from './tasks.schemas.js';
