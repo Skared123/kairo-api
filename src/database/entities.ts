@@ -6,6 +6,9 @@ import { JobContact } from '../contacts/job-contact.entity.js';
 import { JobCriteria } from '../jobs/job-criteria.entity.js';
 import { JobStageChange } from '../jobs/job-stage-change.entity.js';
 import { Job } from '../jobs/job.entity.js';
+import { LearningItemSkill } from '../learning/learning-item-skill.entity.js';
+import { LearningItem } from '../learning/learning-item.entity.js';
+import { Skill } from '../learning/skill.entity.js';
 import { Task } from '../tasks/task.entity.js';
 import { User } from '../users/user.entity.js';
 
@@ -23,4 +26,7 @@ export const entities: NonNullable<DataSourceOptions['entities']> = [
   Contact,
   JobContact,
   ContactInteraction,
+  Skill,
+  LearningItem,
+  LearningItemSkill,
 ];

@@ -11,6 +11,7 @@ import { ContactsModule } from './contacts/contacts.module.js';
 import { envSchema, type Env } from './config/env.schema.js';
 import { buildDataSourceOptions } from './database/database.config.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { LearningModule } from './learning/learning.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { TodayModule } from './today/today.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -48,6 +49,7 @@ import { UsersModule } from './users/users.module.js';
     TasksModule,
     TodayModule,
     ContactsModule,
+    LearningModule,
   ],
   controllers: [AppController],
   providers: [
