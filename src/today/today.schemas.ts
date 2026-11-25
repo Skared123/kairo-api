@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { Contact } from '../contacts/contact.entity.js';
 import { JOB_STATUSES } from '../jobs/job.enums.js';
 import type { Job } from '../jobs/job.entity.js';
+import type { LearningItem } from '../learning/learning-item.entity.js';
+import { learningItemSchema, toLearningItemResponse } from '../learning/learning.schemas.js';
 import { taskSchema } from '../tasks/tasks.schemas.js';
 
 export const followUpSchema = z.object({
@@ -20,6 +22,16 @@ export const contactFollowUpSchema = z.object({
 });
 export type ContactFollowUpResponse = z.infer<typeof contactFollowUpSchema>;
 
+export const focusSchema = learningItemSchema.pick({
+  id: true,
+  title: true,
+  kind: true,
+  url: true,
+  status: true,
+  skills: true,
+});
+export type FocusResponse = z.infer<typeof focusSchema>;
+
 /** Everything Today shows, not filtered by day: the browser sorts it into sections with its own date (decision 035). */
 export const todaySchema = z.object({
   /** Open tasks, and those done in the last 48 hours. */
@@ -28,6 +40,8 @@ export const todaySchema = z.object({
   followUps: z.array(followUpSchema),
   /** The contacts to write to again, soonest first (decision 037). */
   contactFollowUps: z.array(contactFollowUpSchema),
+  /** The study item marked as focus, or null (decision 042). */
+  focus: focusSchema.nullable(),
 });
 export type TodayResponse = z.infer<typeof todaySchema>;
 
@@ -47,4 +61,10 @@ export function toContactFollowUpResponse(contact: Contact): ContactFollowUpResp
     on: contact.nextFollowUpOn!,
     note: contact.nextFollowUpNote,
   };
+}
+
+/** `item.skillLinks` must be loaded with their skills. */
+export function toFocusResponse(item: LearningItem): FocusResponse {
+  const { id, title, kind, url, status, skills } = toLearningItemResponse(item);
+  return { id, title, kind, url, status, skills };
 }

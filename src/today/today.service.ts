@@ -4,6 +4,7 @@ import type { Repository } from 'typeorm';
 import { Contact } from '../contacts/contact.entity.js';
 import { OPEN_STATUSES } from '../jobs/job.enums.js';
 import { Job } from '../jobs/job.entity.js';
+import { LearningItem } from '../learning/learning-item.entity.js';
 import { Task } from '../tasks/task.entity.js';
 
 /**
@@ -13,8 +14,8 @@ import { Task } from '../tasks/task.entity.js';
 const RECENTLY_DONE = '48 hours';
 
 /**
- * What Today shows (docs/design/v0.3-today.md, v0.4-contacts.md). Every query filters by the user, like every other
- * one.
+ * What Today shows (docs/design/v0.3-today.md, v0.4-contacts.md, v0.5-learning.md). Every query filters by the user,
+ * like every other one.
  */
 @Injectable()
 export class TodayService {
@@ -22,6 +23,7 @@ export class TodayService {
     @InjectRepository(Task) private readonly tasks: Repository<Task>,
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
     @InjectRepository(Contact) private readonly contacts: Repository<Contact>,
+    @InjectRepository(LearningItem) private readonly learning: Repository<LearningItem>,
   ) {}
 
   /** Open tasks by due day (those without one last), then the recently done ones. */
@@ -58,5 +60,16 @@ export class TodayService {
       .orderBy('contact.nextFollowUpOn', 'ASC')
       .addOrderBy('LOWER(contact.name)', 'ASC')
       .getMany();
+  }
+
+  /** The study item the user marked as focus, with its skills, or null (decision 042). */
+  focusFor(userId: string): Promise<LearningItem | null> {
+    return this.learning
+      .createQueryBuilder('item')
+      .leftJoinAndSelect('item.skillLinks', 'link')
+      .leftJoinAndSelect('link.skill', 'skill', 'skill.userId = item.userId')
+      .where('item.userId = :userId', { userId })
+      .andWhere('item.isFocus')
+      .getOne();
   }
 }

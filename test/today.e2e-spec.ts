@@ -14,6 +14,14 @@ interface TodayBody {
     on: string;
     note: string | null;
   }[];
+  focus: {
+    id: string;
+    title: string;
+    kind: string;
+    url: string | null;
+    status: string;
+    skills: { name: string }[];
+  } | null;
 }
 
 describe('Today (e2e)', () => {
@@ -50,6 +58,15 @@ describe('Today (e2e)', () => {
     return (await http.post('/contacts').set('Cookie', user.cookie).send(fields).expect(201)).body.id as string;
   }
 
+  async function createItem(user: SignedInUser, fields: Record<string, unknown>): Promise<string> {
+    const res = await http
+      .post('/learning')
+      .set('Cookie', user.cookie)
+      .send({ kind: 'course', ...fields })
+      .expect(201);
+    return res.body.id as string;
+  }
+
   async function createTask(user: SignedInUser, fields: Record<string, unknown>): Promise<string> {
     return (await http.post('/tasks').set('Cookie', user.cookie).send(fields).expect(201)).body.id as string;
   }
@@ -60,7 +77,7 @@ describe('Today (e2e)', () => {
   }
 
   it('is empty for a new account', async () => {
-    expect(await today(ada)).toEqual({ tasks: [], followUps: [], contactFollowUps: [] });
+    expect(await today(ada)).toEqual({ tasks: [], followUps: [], contactFollowUps: [], focus: null });
   });
 
   it('lists open tasks with or without a day, and those done in the last 48 hours', async () => {
@@ -143,23 +160,52 @@ describe('Today (e2e)', () => {
     expect((await today(ada)).contactFollowUps.map((followUp) => followUp.contact.id)).toEqual([later]);
   });
 
+  it('shows the study item marked as focus, with its skills, and nothing once it is done (decision 042)', async () => {
+    await createItem(ada, { title: 'Effective TypeScript', kind: 'book' });
+    expect((await today(ada)).focus).toBeNull();
+
+    const focus = await createItem(ada, {
+      title: 'NestJS Fundamentals',
+      url: 'https://example.com/nestjs',
+      status: 'in_progress',
+      skills: ['TypeScript', 'NestJS'],
+      isFocus: true,
+    });
+    expect((await today(ada)).focus).toEqual({
+      id: focus,
+      title: 'NestJS Fundamentals',
+      kind: 'course',
+      url: 'https://example.com/nestjs',
+      status: 'in_progress',
+      skills: [
+        { id: expect.any(String), name: 'NestJS' },
+        { id: expect.any(String), name: 'TypeScript' },
+      ],
+    });
+
+    await http.patch(`/learning/${focus}`).set('Cookie', ada.cookie).send({ status: 'done' }).expect(200);
+    expect((await today(ada)).focus).toBeNull();
+  });
+
   describe('isolation (CLAUDE.md, hard rules)', () => {
     it("never shows another user's tasks or follow-ups", async () => {
       await createTask(ada, { title: 'Prepare the interview', dueOn: '2026-12-01' });
       await createJob(ada, { company: 'Acme', nextFollowUpOn: '2026-12-01' });
       await createContact(ada, { name: 'Margaret Hamilton', nextFollowUpOn: '2026-12-01' });
+      await createItem(ada, { title: 'NestJS Fundamentals', isFocus: true });
 
-      expect(await today(grace)).toEqual({ tasks: [], followUps: [], contactFollowUps: [] });
-      expect(await today(ada)).toMatchObject({ tasks: [{}], followUps: [{}], contactFollowUps: [{}] });
+      expect(await today(grace)).toEqual({ tasks: [], followUps: [], contactFollowUps: [], focus: null });
+      expect(await today(ada)).toMatchObject({ tasks: [{}], followUps: [{}], contactFollowUps: [{}], focus: {} });
     });
 
     it("keeps the admin out of other users' Today too", async () => {
       await createTask(ada, { title: 'Prepare the interview' });
       await createJob(ada, { company: 'Acme', nextFollowUpOn: '2026-12-01' });
       await createContact(ada, { name: 'Margaret Hamilton', nextFollowUpOn: '2026-12-01' });
+      await createItem(ada, { title: 'NestJS Fundamentals', isFocus: true });
       await dataSource.getRepository(User).update({ id: grace.id }, { role: 'admin' });
 
-      expect(await today(grace)).toEqual({ tasks: [], followUps: [], contactFollowUps: [] });
+      expect(await today(grace)).toEqual({ tasks: [], followUps: [], contactFollowUps: [], focus: null });
     });
   });
 });
