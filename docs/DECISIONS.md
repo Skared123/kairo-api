@@ -857,3 +857,66 @@ companies.
 
 **Consequences.** No change to jobs in this version. The same company can be written two ways; linking a contact to
 its jobs is what ties them together.
+
+---
+
+## 040. Skills are a list of their own
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+
+**Context.** v0.5 adds learning items (videos, courses, articles, books, projects), each training one or more skills.
+In v0.6, AI analysis will find the skills a posting asks for and compare them with the user's.
+
+**Options.** Free-text tags on each item; or a `skills` table per user, linked to items many to many.
+
+**Decision.** A `skills` table: each skill is saved once per user, matched ignoring case and surrounding spaces, so
+"TypeScript" and " typescript" are the same skill. Items link to any number of skills through `learning_item_skills`.
+The item form takes names; the API creates the skills that do not exist yet.
+
+**Consequences.** One place to see everything that trains a skill, renaming fixes every item at once, and v0.6 can
+match a posting's skills exactly. It needs its own screen to rename and delete skills.
+
+---
+
+## 041. A learning item's progress is its status
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+
+**Options.** A status only; or a status and a percentage.
+
+**Decision.** `to_start`, `in_progress`, `done` and `dropped`, with the moment it was finished (`finished_at`) when it
+is done.
+
+**Consequences.** One click to update, nothing that goes stale. Metrics (v0.9) can count finished items per week.
+
+---
+
+## 042. Today shows the study item the user marks as focus
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+
+**Options.** The item the user marks as focus; the in-progress item untouched for longest, picked by Kairo; or nothing
+in Today yet.
+
+**Decision.** The user marks one item as their focus, at most one at a time (a partial unique index enforces it).
+Marking another moves the focus; finishing or dropping the item clears it. `GET /today` returns it, and Today shows it.
+
+**Consequences.** The user decides what deserves their time, and Today stays one screen for the day's work. An item
+the user set aside on purpose never shows up uninvited.
+
+---
+
+## 043. Learning items are not linked to jobs
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+
+**Options.** No link between items and jobs, with skills as the bridge; or an optional job on each item, as on tasks.
+
+**Decision.** No link in v0.5. Skills connect learning and postings once v0.6 extracts a posting's skills; a one-off
+("study GraphQL for the Acme interview") is a task linked to the job.
+
+**Consequences.** No overlap with tasks or with what v0.6 adds. A job's page cannot list study items until then.
