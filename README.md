@@ -3,10 +3,12 @@
 Kairo is a job search companion: track applications, get prepared, and act on the right opportunity in time.
 This repository is the API. The web app lives in `kairo-web`.
 
-> **Status:** v0.4 Contacts. Accounts; every job posting tracked through its stages, with its history, the next
+> **Status:** v0.5 Learning. Accounts; every job posting tracked through its stages, with its history, the next
 > follow-up, a comparison with the user's criteria and a warning about possible duplicates; tasks, optionally linked
-> to a job; and contacts, linked to any number of jobs, with a log of conversations and a next follow-up. `GET /today`
-> returns the open tasks and the follow-ups of jobs and contacts, for the user's Today screen.
+> to a job; contacts, linked to any number of jobs, with a log of conversations and a next follow-up; and learning
+> items (videos, courses, articles, books and projects) with their status and the skills they train, one of them
+> marked as the study focus. `GET /today` returns the open tasks, the follow-ups of jobs and contacts, and the study
+> focus, for the user's Today screen.
 > The product idea, modules and roadmap are in [`docs/IDEA.md`](docs/IDEA.md).
 
 ## Stack
@@ -111,7 +113,8 @@ src/
   jobs/        job postings, their stages and history, the criteria and duplicate detection
   tasks/       the user's tasks, optionally linked to a job
   contacts/    the user's contacts, their links to jobs and the conversation log
-  today/       GET /today: open and recently done tasks, and the follow-ups of jobs and contacts
+  learning/    the user's learning items, their skills and the study focus
+  today/       GET /today: open and recently done tasks, the follow-ups of jobs and contacts, and the focus
   config/      environment variables, validated at startup
   database/    TypeORM options, naming strategy and migrations
 test/          end-to-end tests and their helpers
