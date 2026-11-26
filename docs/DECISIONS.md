@@ -920,3 +920,24 @@ the user set aside on purpose never shows up uninvited.
 ("study GraphQL for the Acme interview") is a task linked to the job.
 
 **Consequences.** No overlap with tasks or with what v0.6 adds. A job's page cannot list study items until then.
+
+---
+
+## 044. kairo-web header: the sections in view, the account in a menu
+
+- **Date:** 2026-11-25
+- **Status:** Accepted
+
+**Context.** The header held every section, the language, the theme, the user's name, the password page and sign-out
+in one row. With Learning it no longer fit, even on a laptop window.
+
+**Options.** The sections in view and the rest in a menu under the user's name; everything behind a menu button below
+some width; or a sidebar.
+
+**Decision.** The header keeps the four sections (Today, Jobs, Contacts, Learning) in view and marks the current one.
+On a phone they show as icons only, keeping their names for screen readers. The user's name opens a menu with their
+email, Admin (for admins), Password, the language, the dark theme and sign-out, built with the shadcn/ui
+`DropdownMenu` already in the app. Signed-out pages keep the language buttons and the theme `Switch` of decision 025.
+
+**Consequences.** Moving between sections takes one click at any width, and the header has room for one more. Changing
+the language or the theme takes two clicks instead of one. No new dependency.
